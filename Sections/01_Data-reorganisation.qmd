@@ -4,22 +4,13 @@ format: html
 editor: visual
 ---
 
-## Load libraries 
+## Load libraries and data
 
-```{r load-libraries}
-#1 message : false
-library(tidyverse)
-library(ez)
-```
-
-## Load the data
-
-```{r load-data}
-
-# Read a data file that is text with columns separated by spaces and strings as factors
-
-Results <- read.table("../data/Results.txt", header = TRUE, sep = " ", stringsAsFactors = TRUE)
-
+```{r setup}
+  
+  #| message: false
+  
+  source("../R/setup.R")
 ```
 
 # 1. Data reorganization
@@ -35,7 +26,7 @@ Results %>%
   count(GROUP, ID)
 ```
 
-**Observation:** data are missing for ID3 in the group pp (400 measures instead of 760). We therefore remove ID3 from the analysis. 
+**Observation:** data are missing for ID3 in the group pp (400 measures instead of 760). We therefore remove ID3 from the analysis.
 
 ### Remove ID3 and recount
 
@@ -61,9 +52,9 @@ Results %>%
 
 **Observation:** R3 has fewer measures than R1 and R2. We look at which groups are responsible.
 
-### Remove REP3 and recount
+### Remove R3 and recount
 
-```{r Remove-REP3-and-recount}
+```{r Remove-R3-and-recount}
 
 Results %>%
   filter(ID != "ID3") %>%
@@ -179,20 +170,4 @@ show(interaction_plot_Group_ID)
 
 ## Conclusion
 
-The GROUP × ID interaction is significant, F(2, 48) = 11.58, p < .001. The effect of task difficulty on movement time differs between groups: movement time increases much more with ID in group pp than in groups ap and cp.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+The GROUP × ID interaction is significant, F(2, 48) = 11.58, p \< .001. The effect of task difficulty on movement time differs between groups: movement time increases much more with ID in group pp than in groups ap and cp.
