@@ -74,7 +74,21 @@ Results %>%
 
 Now every group has the same number of measures in R1 and R2: the design is clean.
 
+### Count the participants per group
 
+n_distinct(SUBJ) counts the different participants, not the number of rows.
+
+```{r Count-the-number-of-participant-per-group}
+
+Results %>%
+  filter(ID != "ID3") %>%
+  filter(REP != "R3") %>%
+  group_by(GROUP) %>%
+  summarise(count = n_distinct(SUBJ))
+
+```
+
+We have 13 participants in ap, 19 in cp and 19 in pp (51 in total).
 
 
 
