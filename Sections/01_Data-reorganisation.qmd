@@ -61,6 +61,27 @@ Results %>%
 
 **Observation:** R3 has fewer measures than R1 and R2. We look at which groups are responsible.
 
+### Remove REP3 and recount
+
+```{r Remove-REP3-and-recount}
+
+Results %>%
+  filter(ID != "ID3") %>%
+  filter(REP != "R3") %>%
+  count(GROUP, REP)
+
+```
+
+Now every group has the same number of measures in R1 and R2: the design is clean.
+
+
+
+
+
+
+
+
+
 
 
 
