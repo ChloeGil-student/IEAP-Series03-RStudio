@@ -90,6 +90,53 @@ Results %>%
 
 We have 13 participants in ap, 19 in cp and 19 in pp (51 in total).
 
+### Create the clean dataframe
+
+We save the cleaned data in a new object clean_results, so we do not have to repeat the filters every time. droplevels() removes the levels ID3 and R3 that the factors still remember after filtering.
+
+```{r Create-clean-dataframe}
+
+clean_results <- Results %>%
+  filter(ID != "ID3") %>%
+  filter(REP != "R3") %>%
+  droplevels()
+
+```
+
+## Run the ANOVA
+
+We want to know whether the effect of task difficulty (ID) on movement time differs between groups, i.e., whether there is a **GROUP × ID interaction**.
+
+The design is mixed:
+
+- GROUP is a between-subjects factor (different participants in each group).
+- ID is a within-subjects factor (each participant performs both difficulty levels).
+
+We use ezANOVA() from the ez library. wid identifies the participant, and type = 3 is the type of sum of squares (it matters because the groups are unbalanced).
+
+```{r Run-the-ANOVA}
+
+res_anova <- ezANOVA(
+  data     = clean_results,
+  dv       = MovementTime,
+  wid      = SUBJ,
+  between  = GROUP,
+  within   = ID,
+  type     = 3,
+  detailed = FALSE
+)
+
+res_anova
+
+```
+
+
+
+
+
+
+
+
 
 
 
