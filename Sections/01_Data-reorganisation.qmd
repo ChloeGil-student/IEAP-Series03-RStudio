@@ -35,7 +35,35 @@ Results %>%
   count(GROUP, ID)
 ```
 
-**Observation:** data are missing for ID3 in the group `pp` (400 measures instead of 760). We therefore remove ID3 from the analysis. 
+**Observation:** data are missing for ID3 in the group pp (400 measures instead of 760). We therefore remove ID3 from the analysis. 
+
+### Remove ID3 and recount
+
+filter(ID != "ID3") keeps all the rows except those where ID is ID3.
+
+```{r Remove-ID3-and-recount}
+Results %>%
+  filter(ID != "ID3") %>%
+  count(GROUP, ID)
+```
+
+The counts still differ between groups, but this is expected: the groups do not have the same number of participants. We still have a problem, so we check the other factors one after the other.
+
+### Check the number of measures by REP
+
+```{r Count-measures-by-rep}
+
+Results %>%
+  filter(ID != "ID3") %>%
+  count(REP)
+
+```
+
+**Observation:** R3 has fewer measures than R1 and R2. We look at which groups are responsible.
+
+
+
+
 
 
 
