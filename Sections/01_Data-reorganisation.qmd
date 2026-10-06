@@ -134,9 +134,7 @@ res_anova
 
 To visualize the interaction, we plot the mean movement time of each GROUP as a function of ID. The lines connect the means, the points show the means, and the error bars show the mean ± 0.5 standard deviation.
 
-### First attempt: 
-
-We first tried to reproduce the look of the figure in the article: a different point shape and line type for each group, and the default grey background.
+### Interaction plot reference
 
 ```{r Interaction-plot-reference}
 
@@ -159,8 +157,29 @@ interaction_plot_reference <- ggplot(clean_results) +
 show(interaction_plot_reference)
 ```
 
+### Interaction plot with within (group x ID) standard deviation
 
+If the lines were parallel, there would be no interaction. Lines with different slopes indicate that the effect of ID depends on the group.
 
+```{r Interaction-plot}
+# plot the interaction between GROUP and ID and add error bars containing the 
+# within (group x ID) standard deviation around the mean
+interaction_plot_Group_ID <- ggplot(clean_results) +
+  aes(x = ID, y = MovementTime, color = GROUP) +
+  stat_summary(fun = mean, geom = "line", aes(group = GROUP)) +
+  stat_summary(fun.data = mean_sdl, fun.args = list(mult = .5), geom = "errorbar", width = 0.01) +
+  stat_summary(fun = mean, geom = "point", shape= 21, fill = "white", size = 3) +
+  labs(title = "Interaction between GROUP and ID on MovementTime",
+       x = "ID",
+       y = "Mean MovementTime (s)") +
+  theme_minimal()
+
+show(interaction_plot_Group_ID)
+```
+
+## Conclusion
+
+The GROUP × ID interaction is significant, F(2, 48) = 11.58, p < .001. The effect of task difficulty on movement time differs between groups: movement time increases much more with ID in group pp than in groups ap and cp.
 
 
 
