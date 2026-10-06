@@ -21,3 +21,23 @@ library(ez)
 Results <- read.table("../data/Results.txt", header = TRUE, sep = " ", stringsAsFactors = TRUE)
 
 ```
+
+# 1. Data reorganization
+
+Real data are often messy. Before running the ANOVA, we check that the design is complete (the same number of measures in every condition) and we remove the conditions that are incomplete. We use the tidyverse library for this.
+
+### Count the measures by GROUP and ID
+
+We count how many data points we have for each combination of GROUP and ID. If a combination has fewer measures than the others, some data are missing.
+
+```{r Count-measures-by-group-id}
+Results %>%
+  count(GROUP, ID)
+```
+
+**Observation:** data are missing for ID3 in the group `pp` (400 measures instead of 760). We therefore remove ID3 from the analysis. 
+
+
+
+
+
