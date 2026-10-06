@@ -4,4 +4,20 @@ format: html
 editor: visual
 ---
 
-## 
+## Load libraries 
+
+```{r load-libraries}
+#1 message : false
+library(tidyverse)
+library(ez)
+```
+
+## Load the data
+
+```{r load-data}
+
+# Read a data file that is text with columns separated by spaces and strings as factors
+
+Results <- read.table("../data/Results.txt", header = TRUE, sep = " ", stringsAsFactors = TRUE)
+
+```
