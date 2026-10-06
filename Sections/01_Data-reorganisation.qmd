@@ -130,8 +130,34 @@ res_anova
 
 ```
 
+## Plot the interaction between GROUP and ID
+
+To visualize the interaction, we plot the mean movement time of each GROUP as a function of ID. The lines connect the means, the points show the means, and the error bars show the mean ± 0.5 standard deviation.
+
+### First attempt: 
+
+We first tried to reproduce the look of the figure in the article: a different point shape and line type for each group, and the default grey background.
+
+```{r Interaction-plot-reference}
 
 
+interaction_plot_reference <- ggplot(clean_results) +
+  aes(x = ID, y = MovementTime, color = GROUP) +
+  # lines: one line type per group
+  stat_summary(fun = mean, geom = "line",
+               aes(group = GROUP, linetype = GROUP), alpha = 0.7) +
+  # error bars: mean ± 0.215 s, same size for all groups
+  stat_summary(fun.data = function(x) data.frame(y    = mean(x),
+                                                 ymin = mean(x) - 0.215,
+                                                 ymax = mean(x) + 0.215),
+               geom = "errorbar", width = 0.25, alpha = 0.7) +
+  # points: one shape per group
+  stat_summary(fun = mean, geom = "point",
+               aes(shape = GROUP), size = 1.5, alpha = 0.7) +
+  labs(x = "ID", y = "Movement Time (s)")
+
+show(interaction_plot_reference)
+```
 
 
 
