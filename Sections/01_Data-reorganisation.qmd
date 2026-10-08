@@ -1,34 +1,3 @@
----
-title: "01_Data-reorganisation"
-format: html
-editor: visual
----
-
-# Setup
-
-The whole report starts with one command. It runs `R/setup.R`, which loads the libraries, reads the data and builds the clean data set used by every section.
-
-```{r source-setup}
-
-source(here::here("R", "setup.R"))
-
-theme_set(theme_classic(base_size = 11))  # same look for all graphs}
-
-```
-
-This is the content of R/setup.R. The reasons for the cleaning step are given in section 1.3.
-
-# Show setup
-
-```{r show-setup}
-#| echo: false
-#| class-output: r
-cat(readLines(here("R", "setup.R")), sep = "\n")
-
-```
-
-# ANOVA: does the effect of difficulty depend on the group?
-
 ## Think before coding
 
 The article [@mottet2017] compares three groups on a reaching task performed at two levels of difficulty. Its Fig. 3 plots movement time (MT) against the index of difficulty (ID) for each group. Our scientific question is therefore:
@@ -109,7 +78,14 @@ With `R3`, the average of a control participant would include an extra, practise
 
 ### The cleaning rule
 
+As in the series, we recount after cleaning. Every cell is now filled, and within a group all cells have the same number of rows:
+
 Both decisions are written once, in the `filter()` line of `R/setup.R` (shown in *Setup*), so that every section works on the same `clean_results`.
+```{r recount-clean}
+clean_results %>%
+  count(GROUP, ID, REP) %>%
+  pivot_wider(names_from = REP, values_from = n)
+```
 
 The cleaning keeps `r nrow(clean_results)` of the `r nrow(Results)` rows (`r round(100 * nrow(clean_results) / nrow(Results))` %). The price is that we set aside valid data, mostly from the two control groups.
 
@@ -142,18 +118,7 @@ Every participant mean is based on 40 movements, so the design is balanced withi
 
 ### Visualize the interaction
 
-We plot the numbers that go into the ANOVA: the mean of the participant means in each GROUP $\times$ ID cell, with the standard deviation between participants.
-
-```{r cell-means}
-cell_means <- subject_means %>%
-  group_by(GROUP, ID, ID_num) %>%
-  summarise(n    = n(),
-            mean = mean(MovementTime),
-            sd   = sd(MovementTime),
-            .groups = "drop")
-knitr::kable(cell_means, digits = 2)
-
-```
+We draw the interaction plot of the series: the mean movement time in each GROUP $\times$ ID cell, with error bars of half a standard deviation on each side, computed over all the movements of the cell.
 
 ```{r fig-interaction}
 #| fig-cap: "Interaction between GROUP and ID. Points: mean of all movements of the cell; bars: plus or minus half a standard deviation of these movements."
@@ -170,8 +135,22 @@ ggplot(clean_results) +
   theme_minimal()
 
 ```
+The lines are not parallel in @fig-interaction: movement time rises much more between `ID1` and `ID2` for the patients than for the two control groups.
 
-The lines are not parallel in @fig-interaction: movement time rises much more between `ID1` and `ID2` for the patients than for the two control groups. The figure also shows a problem for the ANOVA, which assumes similar variances in all groups: the largest standard deviation in the table is `r round(max(cell_means$sd) / min(cell_means$sd))` times the smallest. We come back to this in section 1.7.
+The error bars of this plot describe the spread of individual movements. The ANOVA, however, works on one value per participant, so what matters for the test is the spread between participants. The table below gives the mean and the standard deviation of the participant means in each cell. The means are the same as in the plot, because every participant has the same number of movements; the standard deviations are not.
+
+```{r cell-means}
+cell_means <- subject_means %>%
+  group_by(GROUP, ID, ID_num) %>%
+  summarise(n    = n(),
+            mean = mean(MovementTime),
+            sd   = sd(MovementTime),
+            .groups = "drop")
+
+knitr::kable(cell_means, digits = 2)
+```
+
+This table shows a problem for the ANOVA, which assumes similar variances in all groups: the largest standard deviation is `r round(max(cell_means$sd) / min(cell_means$sd))` times the smallest. We come back to this in section 1.7.
 
 ### Run the ANOVA
 

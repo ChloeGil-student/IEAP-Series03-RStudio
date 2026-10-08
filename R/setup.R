@@ -1,7 +1,6 @@
 # R/setup.R
 # Shared setup: libraries + data loading + cleaning.
-# Every .qmd starts with source("../R/setup.R")
-
+# Sourced once at the top of the master document. 
 library(ez)
 library(tidyverse)
 library(here)
