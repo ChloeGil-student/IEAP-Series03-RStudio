@@ -74,3 +74,24 @@ Results %>%
   pivot_wider(names_from = ID, values_from = n)
 
 ```
+
+The group `pp` has about half the expected rows at `ID3`. Counting rows shows that something is missing, but not who. Counting participants answers both questions at once, for `ID` and for the repetition `REP`:
+
+```{r count-participants}
+Results %>%
+  group_by(GROUP, ID, REP) %>%
+  summarise(participants = n_distinct(SUBJ), .groups = "drop") %>%
+  pivot_wider(names_from = REP, values_from = participants)
+
+```
+
+The group sizes are 13, 19 and 19, as in the article. Two conditions are incomplete:
+
+- **`ID3`** was done by only 10 of the 19 patients. Keeping it would mean either losing 9 patients or comparing the groups on different conditions.
+- **`R3`** was done by no patient and by 11 of the 13 age-matched controls.
+
+### Two decisions
+
+**We remove `ID3` for everybody.** The interaction cannot be estimated fairly with a level that half of one group did not do.
+
+**We also remove `R3` for everybody.** This one is a choice, not an obligation: the ANOVA would run with `R3`, because the rows are averaged per participant anyway. We had two reasons. The first is in the data: the first repetition is slower than the following ones.
