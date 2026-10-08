@@ -4,4 +4,213 @@ format: html
 editor: visual
 ---
 
-## 
+# Setup
+
+The whole report starts with one command. It runs `R/setup.R`, which loads the libraries, reads the data and builds the clean data set used by every section.
+
+```{r source-setup}
+
+source(here::here("R", "setup.R"))
+
+theme_set(theme_classic(base_size = 11))  # same look for all graphs}
+
+```
+
+This is the content of R/setup.R. The reasons for the cleaning step are given in section 1.3.
+
+# Show setup
+
+```{r show-setup}
+#| echo: false
+#| class-output: r
+cat(readLines(here("R", "setup.R")), sep = "\n")
+
+```
+
+# ANOVA: does the effect of difficulty depend on the group?
+
+## Think before coding
+
+The article [@mottet2017] compares three groups on a reaching task performed at two levels of difficulty. Its Fig. 3 plots movement time (MT) against the index of difficulty (ID) for each group. Our scientific question is therefore:
+
+> **Does the effect of task difficulty on movement time depend on the group?**
+
+Before writing any code, we fixed what each part of the question means in the data file.
+
+| In the question | In `Results.txt` | Role in the analysis |
+|:------------------|:------------------|:---------------------------------|
+| Movement time | `MovementTime` (s) | dependent variable |
+| Difficulty | `ID` (`ID1`, `ID2`, `ID3`) | **within**-subject factor: a participant does several levels |
+| Group | `GROUP` (`pp`, `ap`, `cp`) | **between**-subject factor: a participant belongs to one group |
+| Participant | `SUBJ` | unit of observation |
+
+The article has 19 patients, 13 age-matched controls and 19 young controls. We will check in section 1.3 that the group sizes in the file match, which tells us that `pp` are the patients, `ap` the age-matched controls and `cp` the young controls.
+
+The question then splits into the four sub-questions of the series:
+
+1.  *Is the effect of difficulty the same in all groups?* This is the GROUP $\times$ ID **interaction**, not the two main effects.
+2.  *How do we visualize it?* With one line per group across the ID levels: parallel lines mean no interaction.
+3.  *Is there a significant difference?* We test it with a mixed ANOVA (GROUP between, ID within).
+4.  *What sentence do we write in the report?* See the end of section 1.3.
+
+One point needed attention from the start: the file has one row per reaching movement, but the ANOVA compares participants. Movements of the same person are not independent observations, so they must be averaged per participant before the test.
+
+## Which library?
+
+We use `ez`, as suggested in the series: `ezANOVA()` runs a mixed ANOVA in one call. We looked at what it does with our file: when it receives several rows per participant and condition, it averages them itself and only says so in a warning. We prefer to do this averaging ourselves (section 1.3), so that the step is visible in the report and the ANOVA receives exactly one value per participant and ID level.
+
+## Data reorganization
+
+The data are loaded by `R/setup.R` (see *Setup* at the start of the report). The raw table `Results` has `r nrow(Results)` rows, one per reaching movement.
+
+### Looking for missing data
+
+A within-subject factor needs every participant in every level. As in the series, we first count the rows in each GROUP $\times$ ID cell.
+
+```{r Count-measures-by-group-id}
+
+Results %>%
+  count(GROUP, ID) %>%
+  pivot_wider(names_from = ID, values_from = n)
+
+```
+
+The group `pp` has about half the expected rows at `ID3`. Counting rows shows that something is missing, but not who. Counting participants answers both questions at once, for `ID` and for the repetition `REP`:
+
+```{r count-participants}
+Results %>%
+  group_by(GROUP, ID, REP) %>%
+  summarise(participants = n_distinct(SUBJ), .groups = "drop") %>%
+  pivot_wider(names_from = REP, values_from = participants)
+
+```
+
+The group sizes are 13, 19 and 19, as in the article. Two conditions are incomplete:
+
+- **`ID3`** was done by only 10 of the 19 patients. Keeping it would mean either losing 9 patients or comparing the groups on different conditions.
+- **`R3`** was done by no patient and by 11 of the 13 age-matched controls.
+
+### Two decisions
+
+**We remove `ID3` for everybody.** The interaction cannot be estimated fairly with a level that half of one group did not do.
+
+**We also remove `R3` for everybody.** This one is a choice, not an obligation: the ANOVA would run with `R3`, because the rows are averaged per participant anyway. We had two reasons. The first is in the data: the first repetition is slower than the following ones.
+
+```{r practice-effect}
+Results %>%
+  filter(ID != "ID3") %>%
+  group_by(GROUP, REP) %>%
+  summarise(mean_MT = round(mean(MovementTime), 2), .groups = "drop") %>%
+  pivot_wider(names_from = REP, values_from = mean_MT)
+
+```
+
+With `R3`, the average of a control participant would include an extra, practised repetition that no patient did, and part of the group difference would be a practice effect. The second reason is the design of the article: two levels of difficulty, and 80 reaching movements per participant [@mottet2017, Methods]. Without `ID3` and `R3`, our data have exactly this structure (checked below).
+
+### The cleaning rule
+
+Both decisions are written once, in the `filter()` line of `R/setup.R` (shown in *Setup*), so that every section works on the same `clean_results`.
+
+The cleaning keeps `r nrow(clean_results)` of the `r nrow(Results)` rows (`r round(100 * nrow(clean_results) / nrow(Results))` %). The price is that we set aside valid data, mostly from the two control groups.
+
+### One value per participant and ID level
+
+```{r Subject-mean}
+
+subject_means <- clean_results %>%
+  group_by(GROUP, SUBJ, ID, ID_num) %>%
+  summarise(n_movements  = n(),
+            MovementTime = mean(MovementTime),
+            .groups = "drop")
+
+# Safety check: every participant must have both ID levels
+stopifnot(all(count(subject_means, SUBJ)$n == 2))
+```
+
+We check the result of the cleaning on this table: number of participants per group, and number of movements behind each participant mean.
+
+```{r check-design}
+subject_means %>%
+  group_by(GROUP) %>%
+  summarise(participants  = n_distinct(SUBJ),
+            min_movements = min(n_movements),
+            max_movements = max(n_movements))
+
+```
+
+Every participant mean is based on 40 movements, so the design is balanced within participants, and 2 $\times$ 40 gives the 80 movements of the article. The groups, however, do not have the same number of participants: the design is not balanced between groups. Cleaning cannot fix that, and it is the reason for `type = 3` in the ANOVA below.
+
+### Visualize the interaction
+
+We plot the numbers that go into the ANOVA: the mean of the participant means in each GROUP $\times$ ID cell, with the standard deviation between participants.
+
+```{r cell-means}
+cell_means <- subject_means %>%
+  group_by(GROUP, ID, ID_num) %>%
+  summarise(n    = n(),
+            mean = mean(MovementTime),
+            sd   = sd(MovementTime),
+            .groups = "drop")
+knitr::kable(cell_means, digits = 2)
+
+```
+
+```{r fig-interaction}
+#| fig-cap: "Interaction between GROUP and ID. Points: mean of all movements of the cell; bars: plus or minus half a standard deviation of these movements."
+ggplot(clean_results) +
+  aes(x = ID, y = MovementTime, group = GROUP,
+      color = fct_relevel(GROUP, "ap", "cp")) +   # group order of the series
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(fun = mean, geom = "errorbar", width = 0.01,
+               fun.min = \(x) mean(x) - sd(x) / 2,
+               fun.max = \(x) mean(x) + sd(x) / 2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, fill = "white", size = 3) +
+  labs(title = "Interaction between GROUP and ID on MovementTime",
+       x = "ID", y = "Mean MovementTime (s)", color = "GROUP") +
+  theme_minimal()
+
+```
+
+The lines are not parallel in @fig-interaction: movement time rises much more between `ID1` and `ID2` for the patients than for the two control groups. The figure also shows a problem for the ANOVA, which assumes similar variances in all groups: the largest standard deviation in the table is `r round(max(cell_means$sd) / min(cell_means$sd))` times the smallest. We come back to this in section 1.7.
+
+### Run the ANOVA
+
+```{r run-ANOVA}
+#| warning: true
+res_anova <- ezANOVA(
+  data    = as.data.frame(subject_means),  # ez expects a plain data frame
+  dv      = MovementTime,
+  wid     = SUBJ,
+  between = GROUP,
+  within  = ID,
+  type    = 3   # groups of unequal size
+)
+
+res_anova$ANOVA
+
+```
+
+Warnings are hidden everywhere else in this report, but not for this chunk: `ezANOVA()` reminds us that the groups are of unequal size, which is what we saw above. There is no sphericity test in the output because `ID` has only two levels. The table is identical to the one in the series, which confirms that averaging per participant ourselves is what `ezANOVA()` was doing silently.
+
+### The sentence for the report
+
+```{r anova-sentence}
+#| include: false
+a <- res_anova$ANOVA
+rownames(a) <- a$Effect
+
+# Text such as "F(2, 48) = 11.58, p < .001" for one line of the ANOVA table
+report_F <- function(effect) {
+  p <- a[effect, "p"]
+  sprintf("F(%d, %d) = %.2f, %s",
+          a[effect, "DFn"], a[effect, "DFd"], a[effect, "F"],
+          ifelse(p < .001, "p < .001", sprintf("p = %.3f", p)))
+  }
+
+```
+
+Movement time differed between the groups (main effect of GROUP, `r report_F("GROUP")`) and was longer for the more difficult task (main effect of ID, `r report_F("ID")`). **The effect of difficulty was not the same in all groups** (GROUP $\times$ ID interaction, `r report_F("GROUP:ID")`): the increase of movement time with difficulty was steeper for the patients (@fig-interaction).
+
+The effect sizes put this result in perspective. The generalized eta squared (column `ges`) is `r round(a["GROUP", "ges"], 2)` for GROUP but only `r round(a["GROUP:ID", "ges"], 2)` for the interaction. The main difference between the groups is that patients are slower at *both* levels of difficulty; the fact that difficulty costs them more is real, but it comes second.
+
+The ANOVA says that the groups differ, not which ones. We did not run post-hoc comparisons, so the statement that the *patients* differ from the two control groups rests on the figure, not on a test.
