@@ -139,3 +139,18 @@ subject_means %>%
 ```
 
 Every participant mean is based on 40 movements, so the design is balanced within participants, and 2 $\times$ 40 gives the 80 movements of the article. The groups, however, do not have the same number of participants: the design is not balanced between groups. Cleaning cannot fix that, and it is the reason for `type = 3` in the ANOVA below.
+
+### Visualize the interaction
+
+We plot the numbers that go into the ANOVA: the mean of the participant means in each GROUP $\times$ ID cell, with the standard deviation between participants.
+
+```{r cell-means}
+cell_means <- subject_means %>%
+  group_by(GROUP, ID, ID_num) %>%
+  summarise(n    = n(),
+            mean = mean(MovementTime),
+            sd   = sd(MovementTime),
+            .groups = "drop")
+knitr::kable(cell_means, digits = 2)
+
+```
