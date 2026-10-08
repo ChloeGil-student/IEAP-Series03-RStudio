@@ -4,4 +4,25 @@ format: html
 editor: visual
 ---
 
-## 
+# Setup
+
+The whole report starts with one command. It runs `R/setup.R`, which loads the libraries, reads the data and builds the clean data set used by every section.
+
+```{r source-setup}
+
+source(here::here("R", "setup.R"))
+
+theme_set(theme_classic(base_size = 11))  # same look for all graphs}
+
+```
+
+This is the content of R/setup.R. The reasons for the cleaning step are given in section 1.3.
+
+# Show setup
+
+```{r show-setup}
+#| echo: false
+#| class-output: r
+cat(readLines(here("R", "setup.R")), sep = "\n")
+
+```
