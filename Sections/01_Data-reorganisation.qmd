@@ -154,3 +154,21 @@ cell_means <- subject_means %>%
 knitr::kable(cell_means, digits = 2)
 
 ```
+
+```{r fig-interaction}
+#| fig-cap: "Interaction between GROUP and ID. Points: mean of all movements of the cell; bars: plus or minus half a standard deviation of these movements."
+ggplot(clean_results) +
+  aes(x = ID, y = MovementTime, group = GROUP,
+      color = fct_relevel(GROUP, "ap", "cp")) +   # group order of the series
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(fun = mean, geom = "errorbar", width = 0.01,
+               fun.min = \(x) mean(x) - sd(x) / 2,
+               fun.max = \(x) mean(x) + sd(x) / 2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, fill = "white", size = 3) +
+  labs(title = "Interaction between GROUP and ID on MovementTime",
+       x = "ID", y = "Mean MovementTime (s)", color = "GROUP") +
+  theme_minimal()
+
+```
+
+The lines are not parallel in @fig-interaction: movement time rises much more between `ID1` and `ID2` for the patients than for the two control groups. The figure also shows a problem for the ANOVA, which assumes similar variances in all groups: the largest standard deviation in the table is `r round(max(cell_means$sd) / min(cell_means$sd))` times the smallest. We come back to this in section 1.7.
