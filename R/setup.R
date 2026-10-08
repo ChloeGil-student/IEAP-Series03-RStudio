@@ -4,13 +4,18 @@
 
 library(ez)
 library(tidyverse)
+library(here)
 
 # Load the raw data
-Results <- read.table("../data/Results.txt", header = TRUE, sep = " ",
+Results <- read.table(here("data", "Results.txt"), header = TRUE, sep = " ",
                       stringsAsFactors = TRUE)
 
 # Clean data: remove ID3 and REP3 (incomplete conditions)
 clean_results <- Results %>%
   filter(ID != "ID3") %>%
   filter(REP != "R3") %>%
-  droplevels()
+  droplevels() %>%
+  mutate(
+    GROUP  = factor(GROUP, levels = c("pp", "ap", "cp")),
+    ID_num = ifelse(ID == "ID1", 3.80, 5.43)
+  )
