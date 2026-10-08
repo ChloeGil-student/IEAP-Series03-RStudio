@@ -106,3 +106,36 @@ Results %>%
 ```
 
 With `R3`, the average of a control participant would include an extra, practised repetition that no patient did, and part of the group difference would be a practice effect. The second reason is the design of the article: two levels of difficulty, and 80 reaching movements per participant [@mottet2017, Methods]. Without `ID3` and `R3`, our data have exactly this structure (checked below).
+
+### The cleaning rule
+
+Both decisions are written once, in the `filter()` line of `R/setup.R` (shown in *Setup*), so that every section works on the same `clean_results`.
+
+The cleaning keeps `r nrow(clean_results)` of the `r nrow(Results)` rows (`r round(100 * nrow(clean_results) / nrow(Results))` %). The price is that we set aside valid data, mostly from the two control groups.
+
+### One value per participant and ID level
+
+```{r Subject-mean}
+
+subject_means <- clean_results %>%
+  group_by(GROUP, SUBJ, ID, ID_num) %>%
+  summarise(n_movements  = n(),
+            MovementTime = mean(MovementTime),
+            .groups = "drop")
+
+# Safety check: every participant must have both ID levels
+stopifnot(all(count(subject_means, SUBJ)$n == 2))
+```
+
+We check the result of the cleaning on this table: number of participants per group, and number of movements behind each participant mean.
+
+```{r check-design}
+subject_means %>%
+  group_by(GROUP) %>%
+  summarise(participants  = n_distinct(SUBJ),
+            min_movements = min(n_movements),
+            max_movements = max(n_movements))
+
+```
+
+Every participant mean is based on 40 movements, so the design is balanced within participants, and 2 $\times$ 40 gives the 80 movements of the article. The groups, however, do not have the same number of participants: the design is not balanced between groups. Cleaning cannot fix that, and it is the reason for `type = 3` in the ANOVA below.
