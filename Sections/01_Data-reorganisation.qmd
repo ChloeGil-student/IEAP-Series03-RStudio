@@ -66,3 +66,11 @@ The data are loaded by `R/setup.R` (see *Setup* at the start of the report). The
 ### Looking for missing data
 
 A within-subject factor needs every participant in every level. As in the series, we first count the rows in each GROUP $\times$ ID cell.
+
+```{r Count-measures-by-group-id}
+
+Results %>%
+  count(GROUP, ID) %>%
+  pivot_wider(names_from = ID, values_from = n)
+
+```
