@@ -26,3 +26,43 @@ This is the content of R/setup.R. The reasons for the cleaning step are given in
 cat(readLines(here("R", "setup.R")), sep = "\n")
 
 ```
+
+# ANOVA: does the effect of difficulty depend on the group?
+
+## Think before coding
+
+The article [@mottet2017] compares three groups on a reaching task performed at two levels of difficulty. Its Fig. 3 plots movement time (MT) against the index of difficulty (ID) for each group. Our scientific question is therefore:
+
+> **Does the effect of task difficulty on movement time depend on the group?**
+
+Before writing any code, we fixed what each part of the question means in the data file.
+
+| In the question | In `Results.txt` | Role in the analysis |
+|:------------------|:------------------|:---------------------------------|
+| Movement time | `MovementTime` (s) | dependent variable |
+| Difficulty | `ID` (`ID1`, `ID2`, `ID3`) | **within**-subject factor: a participant does several levels |
+| Group | `GROUP` (`pp`, `ap`, `cp`) | **between**-subject factor: a participant belongs to one group |
+| Participant | `SUBJ` | unit of observation |
+
+The article has 19 patients, 13 age-matched controls and 19 young controls. We will check in section 1.3 that the group sizes in the file match, which tells us that `pp` are the patients, `ap` the age-matched controls and `cp` the young controls.
+
+The question then splits into the four sub-questions of the series:
+
+1.  *Is the effect of difficulty the same in all groups?* This is the GROUP $\times$ ID **interaction**, not the two main effects.
+2.  *How do we visualize it?* With one line per group across the ID levels: parallel lines mean no interaction.
+3.  *Is there a significant difference?* We test it with a mixed ANOVA (GROUP between, ID within).
+4.  *What sentence do we write in the report?* See the end of section 1.3.
+
+One point needed attention from the start: the file has one row per reaching movement, but the ANOVA compares participants. Movements of the same person are not independent observations, so they must be averaged per participant before the test.
+
+## Which library?
+
+We use `ez`, as suggested in the series: `ezANOVA()` runs a mixed ANOVA in one call. We looked at what it does with our file: when it receives several rows per participant and condition, it averages them itself and only says so in a warning. We prefer to do this averaging ourselves (section 1.3), so that the step is visible in the report and the ANOVA receives exactly one value per participant and ID level.
+
+## Data reorganization
+
+The data are loaded by `R/setup.R` (see *Setup* at the start of the report). The raw table `Results` has `r nrow(Results)` rows, one per reaching movement.
+
+### Looking for missing data
+
+A within-subject factor needs every participant in every level. As in the series, we first count the rows in each GROUP $\times$ ID cell.
