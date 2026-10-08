@@ -1,0 +1,79 @@
+---
+title: "IEAP-2026 Series 03 — Data wrangling and ANOVA"
+subtitle: "RStudio assignment · Team TUBA / DEEMUA / GILLES"
+author:
+  - name: Tuba TUBA
+    affiliations: "Student A"
+  - name: Charles Sam DEEMUA
+    affiliations: "Student B"
+  - name: Chloé GILLES
+    affiliations: "Student C"
+date: today
+date-format: "D MMMM YYYY"
+lang: en
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-width: 6
+    fig-height: 4
+    geometry: margin=2.5cm
+bibliography: references.bib
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# About this report {.unnumbered}
+
+- **GitHub repository (public):** <https://github.com/ChloeGil-student/IEAP-Series03-RStudio>
+- **Goal:** reproduce the main result of @mottet2017 (their Fig. 3: movement time as a function of the index of difficulty, by group) with a full ANOVA pipeline, and discuss why our numbers differ from the published ones.
+- **Structure:** this file is the *master document*. Each part is written in its own file in `Sections/` and included here at render time. Section numbers 1.1 to 1.7 are those of the series.
+
+| Section | File | Owner |
+|:-------------------------|:-----------------------------|:----------------|
+| 1.1–1.3 Question, data reorganization, ANOVA | `Sections/01_Data-reorganisation.qmd` | Chloé GILLES |
+| 1.4 Linear regression by GROUP | `Sections/02_Linear-regression-by-group.qmd` | Charles Sam DEEMUA |
+| 1.5–1.6 Graph and PDF export | `Sections/03_Save-the-graph.qmd` | Tuba TUBA |
+| 1.7 Discussion of the differences | `Sections/04_Discussion-of-the-differences.qmd` | Chloé GILLES |
+| 2–4 Git workflow, challenges, checklist | `Sections/05_GitWorkflow.qmd`, `Sections/06_Checklist.qmd` | All together |
+
+# Setup {.unnumbered}
+
+The whole report starts with one command. It runs `R/setup.R`, which loads the libraries, reads the data and builds the clean data set used by every section.
+
+```{r setup}
+source(here::here("R", "setup.R"))
+
+theme_set(theme_classic(base_size = 11))  # same look for all graphs
+```
+
+This is the content of `R/setup.R`. The reasons for the cleaning step are given in section 1.3.
+
+```{r show-setup}
+#| echo: false
+#| class-output: r
+cat(readLines(here("R", "setup.R")), sep = "\n")
+```
+
+# ANOVA: does the effect of difficulty depend on the group?
+
+{{< include Sections/01_Data-reorganisation.qmd >}}
+
+# Data sources {.unnumbered}
+
+| File | Description | Source (URL) |
+|:-----------------|:------------------------------|:----------------------|
+| `data/Results.txt` | One row per reaching movement: GROUP, SUBJ, TRIAL, ORI, DIR, ID, REP, NbVelPeaks, MovementTime | Course Moodle page, IEAP Series 03: <https://moodle.umontpellier.fr/mod/folder/view.php?id=1025707> |
+| Fig. 3 of the article | Reference figure and equations (MT as a function of ID, by group) | <https://doi.org/10.1371/journal.pone.0173674> |
+
+# Software {.unnumbered}
+
+Analyses were run in R (`r R.version.string`) with the packages `ez` (`r as.character(packageVersion("ez"))`), `tidyverse` (`r as.character(packageVersion("tidyverse"))`) and `here` (`r as.character(packageVersion("here"))`). The report was written with Quarto.
+
+# References {.unnumbered}
+
+::: {#refs}
+:::
