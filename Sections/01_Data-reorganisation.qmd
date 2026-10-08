@@ -95,3 +95,14 @@ The group sizes are 13, 19 and 19, as in the article. Two conditions are incompl
 **We remove `ID3` for everybody.** The interaction cannot be estimated fairly with a level that half of one group did not do.
 
 **We also remove `R3` for everybody.** This one is a choice, not an obligation: the ANOVA would run with `R3`, because the rows are averaged per participant anyway. We had two reasons. The first is in the data: the first repetition is slower than the following ones.
+
+```{r practice-effect}
+Results %>%
+  filter(ID != "ID3") %>%
+  group_by(GROUP, REP) %>%
+  summarise(mean_MT = round(mean(MovementTime), 2), .groups = "drop") %>%
+  pivot_wider(names_from = REP, values_from = mean_MT)
+
+```
+
+With `R3`, the average of a control participant would include an extra, practised repetition that no patient did, and part of the group difference would be a practice effect. The second reason is the design of the article: two levels of difficulty, and 80 reaching movements per participant [@mottet2017, Methods]. Without `ID3` and `R3`, our data have exactly this structure (checked below).
