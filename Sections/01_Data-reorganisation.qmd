@@ -172,3 +172,45 @@ ggplot(clean_results) +
 ```
 
 The lines are not parallel in @fig-interaction: movement time rises much more between `ID1` and `ID2` for the patients than for the two control groups. The figure also shows a problem for the ANOVA, which assumes similar variances in all groups: the largest standard deviation in the table is `r round(max(cell_means$sd) / min(cell_means$sd))` times the smallest. We come back to this in section 1.7.
+
+### Run the ANOVA
+
+```{r run-ANOVA}
+#| warning: true
+res_anova <- ezANOVA(
+  data    = as.data.frame(subject_means),  # ez expects a plain data frame
+  dv      = MovementTime,
+  wid     = SUBJ,
+  between = GROUP,
+  within  = ID,
+  type    = 3   # groups of unequal size
+)
+
+res_anova$ANOVA
+
+```
+
+Warnings are hidden everywhere else in this report, but not for this chunk: `ezANOVA()` reminds us that the groups are of unequal size, which is what we saw above. There is no sphericity test in the output because `ID` has only two levels. The table is identical to the one in the series, which confirms that averaging per participant ourselves is what `ezANOVA()` was doing silently.
+
+### The sentence for the report
+
+```{r anova-sentence}
+#| include: false
+a <- res_anova$ANOVA
+rownames(a) <- a$Effect
+
+# Text such as "F(2, 48) = 11.58, p < .001" for one line of the ANOVA table
+report_F <- function(effect) {
+  p <- a[effect, "p"]
+  sprintf("F(%d, %d) = %.2f, %s",
+          a[effect, "DFn"], a[effect, "DFd"], a[effect, "F"],
+          ifelse(p < .001, "p < .001", sprintf("p = %.3f", p)))
+  }
+
+```
+
+Movement time differed between the groups (main effect of GROUP, `r report_F("GROUP")`) and was longer for the more difficult task (main effect of ID, `r report_F("ID")`). **The effect of difficulty was not the same in all groups** (GROUP $\times$ ID interaction, `r report_F("GROUP:ID")`): the increase of movement time with difficulty was steeper for the patients (@fig-interaction).
+
+The effect sizes put this result in perspective. The generalized eta squared (column `ges`) is `r round(a["GROUP", "ges"], 2)` for GROUP but only `r round(a["GROUP:ID", "ges"], 2)` for the interaction. The main difference between the groups is that patients are slower at *both* levels of difficulty; the fact that difficulty costs them more is real, but it comes second.
+
+The ANOVA says that the groups differ, not which ones. We did not run post-hoc comparisons, so the statement that the *patients* differ from the two control groups rests on the figure, not on a test.
