@@ -12,4 +12,26 @@ clean_results %>%
   count(ID, ID_num)
 ```
 
-### 
+### One regression per group
+
+The function below fits the line for each group of a data frame and returns the intercept, the slope and the equation as text. We wrote a function because we fit the same model on other versions of the data in section 1.7.
+
+```{r}
+#| label: fit-by-group
+fit_by_group <- function(data) {
+  data %>%
+    group_by(GROUP) %>%
+    group_modify(~ {
+      model <- lm(MovementTime ~ ID_num, data = .x)
+      tibble(intercept = coef(model)[[1]], slope = coef(model)[[2]])
+    }) %>%
+    ungroup() %>%
+    mutate(equation = sprintf("MT = %.3f + %.3f * ID", intercept, slope))
+}
+
+regression_by_group <- fit_by_group(clean_results)
+
+knitr::kable(regression_by_group, digits = 3)
+```
+
+These are the three equations given in the series, so our cleaning and our conversion of ID reproduce the expected result.
