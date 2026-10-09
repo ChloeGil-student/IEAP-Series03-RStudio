@@ -38,7 +38,7 @@ execute:
 | 1.4 Linear regression by GROUP | `Sections/02_Linear-regression-by-group.qmd` | Charles Sam DEEMUA |
 | 1.5–1.6 Graph and PDF export | `Sections/03_Save-the-graph.qmd` | Tuba TUBA |
 | 1.7 Discussion of the differences | `Sections/04_Discussion-of-the-differences.qmd` | Chloé GILLES |
-| 2–4 Git workflow, challenges, checklist | `Sections/05_GitWorkflow.qmd`, `Sections/06_Checklist.qmd` | All together |
+| 2–4 Git workflow, challenges, checklist | `Sections/05_GitWorkflow_Checklist.qmd` | Chloé GILLES |
 
 # Setup {.unnumbered}
 
@@ -64,6 +64,7 @@ cat(readLines(here("R", "setup.R")), sep = "\n")
 {{< include Sections/02_Linear-regression-by-group.qmd >}}
 {{< include Sections/03_Save-the-graph.qmd >}}
 {{< include Sections/04_Discussion-of-the-differences.qmd >}}
+{{< include Sections/05_GitWorkflow_Checklist.qmd >}}
 
 # Data sources {.unnumbered}
 
