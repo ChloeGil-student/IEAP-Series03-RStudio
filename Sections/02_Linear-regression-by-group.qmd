@@ -1,7 +1,15 @@
----
-title: "02_Linear-regression-by-group"
-format: html
-editor: visual
----
+## Linear regression by GROUP
 
-## 
+The ANOVA treats `ID1` and `ID2` as two labels. The article goes one step further and describes each group by a line, $MT = a + b \times ID$ (Fitts's law), where ID is a number of bits, the slope $b$ is the time cost of one more bit of difficulty and the intercept $a$ is the predicted time for a movement without accuracy constraint [@mottet2017]. We compute this line for each group.
+
+### ID as a number
+
+A regression needs a numerical predictor. In the article, the two levels of difficulty are 3.80 and 5.43 bits [@mottet2017, Methods]. The conversion is done once, in `R/setup.R` (column `ID_num`, shown in *Setup*). We check that each label received the right value:
+
+```{r}
+#| label: check-id-num
+clean_results %>%
+  count(ID, ID_num)
+```
+
+### 
