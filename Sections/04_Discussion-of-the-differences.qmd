@@ -106,17 +106,100 @@ For the controls it is the opposite. The intervals are narrow, and the intercept
 
 These intervals need one caution. They describe what would change with other participants. The article very probably analysed the same participants as our file (same three group sizes), so sampling cannot be the cause of the difference between its equations and ours. The intervals tell us how much weight the equations can carry, not why the two analyses differ. For that we have to look inside the patient group.
 
+### Where the difference comes from: three patients
 
+```{r patient-lines}
+long_by_patient <- clean_results %>%
+  filter(MovementTime >= 10) %>%
+  count(SUBJ, name = "movements_over_10_s")
 
+patients_with_ID3 <- Results %>%
+  filter(GROUP == "pp", ID == "ID3") %>%
+  distinct(SUBJ) %>%
+  pull(SUBJ)
 
+patients <- participant_lines %>%
+  filter(GROUP == "pp") %>%
+  left_join(long_by_patient, by = "SUBJ") %>%
+  mutate(movements_over_10_s = replace_na(movements_over_10_s, 0),
+         did_ID3 = ifelse(SUBJ %in% patients_with_ID3, "yes", "no")) %>%
+  arrange(desc(slope))
 
+patients %>%
+  select(SUBJ, ID1, ID2, slope, intercept, movements_over_10_s, did_ID3) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Patient", "MT at ID1 (s)", "MT at ID2 (s)",
+                             "Slope (s/bit)", "Intercept (s)",
+                             "Movements of 10 s or more", "Did ID3"))
+```
 
+```{r steep-patients}
+#| include: false
+# The limit of 2 s/bit falls in the empty space between the two sets of slopes
+steep  <- filter(patients, slope > 2)
+others <- filter(patients, slope <= 2)
 
+n_long_all   <- sum(patients$movements_over_10_s)
+n_long_steep <- sum(steep$movements_over_10_s)
+```
 
+The slopes of the patients do not form one cloud around 0.9 s/bit. `r nrow(others)` patients have a slope between `r round(min(others$slope), 2)` and `r round(max(others$slope), 2)` s/bit, and `r nrow(steep)` patients (`r paste(steep$SUBJ, collapse = ", ")`) have a slope between `r round(min(steep$slope), 2)` and `r round(max(steep$slope), 2)` s/bit, with nothing in between. The median slope of the 19 patients is `r round(median(patients$slope), 2)` s/bit, which is close to the article (0.672), whereas the mean is `r round(mean(patients$slope), 2)`. Our group equation is a mean, and it is pulled by these `r nrow(steep)` patients.
 
+The table below shows how much. Below the table, the two numbers are the lowest and highest intercepts obtained when the equation is recomputed 19 times, each time without one patient.
 
+```{r leave-one-out}
+line_of <- function(data) {
+  summarise(data, intercept = mean(intercept), slope = mean(slope))
+}
 
+leave_one_out <- map_dfr(as.character(patients$SUBJ),
+                         \(s) line_of(filter(patients, SUBJ != s)))
 
+bind_rows(
+  "Article (Fig. 3)"            = filter(article, GROUP == "pp") %>% select(intercept, slope),
+  "Ours, 19 patients"           = line_of(patients),
+  "Ours, without the steepest patients" = line_of(others),
+  .id = "equation"
+) %>%
+  mutate(MT_easy = intercept + slope * 3.80,
+         MT_hard = intercept + slope * 5.43) %>%
+  knitr::kable(digits = c(0, 3, 3, 2, 2),
+               col.names = c("Equation of the patients", "Intercept (s)", "Slope (s/bit)",
+                             "MT at 3.80 bits (s)", "MT at 5.43 bits (s)"))
 
+range(leave_one_out$intercept)
+```
 
+Leaving out a single patient is enough to move the intercept from one side of zero to the other. Without the `r nrow(steep)` steepest patients, the intercept is positive and the predicted movement times are close to those of the article, slightly below. We do not propose to remove these patients: the article did not (see the degrees of freedom above), and they are probably the patients for whom the task says the most. The point is that the equation of the patient group describes two kinds of patients with one line.
 
+Our first idea had been to look at very long movements instead of participants. It leads to the same place: `r n_long_all` movements last 10 s or more, all of them in the patient group, and `r n_long_steep` of them come from these `r nrow(steep)` patients. The file also tells us what these movements are, through a column that we had not used so far:
+
+```{r velocity-peaks}
+clean_results %>%
+  filter(GROUP == "pp") %>%
+  group_by(duration = ifelse(MovementTime >= 10, "10 s or more", "under 10 s")) %>%
+  summarise(movements    = n(),
+            median_peaks = median(NbVelPeaks))
+```
+
+The long movements have many more velocity peaks than the others. They are not recording errors with an impossible duration; they are movements made of many small sub-movements. So there is no reason in our data to discard them. In the article, movement time ends at "the first velocity minimum that was within the target" [@mottet2017, Data analysis]. For a movement made of many sub-movements, where this end is placed depends on how the velocity signal is filtered and parsed, and a different choice could shorten these movements a lot, mainly for these patients and at the difficult level. We only have the final values, so we cannot redo the parsing. But we can check whether our file was processed like the data of the article, by comparing group means with its Table 2. We assume that `NbVelPeaks` is what the article calls the number of sub-movements, which it counts as the number of velocity maxima.
+
+```{r compare-table2}
+table2 <- tibble(
+  GROUP       = factor(c("pp", "ap", "cp"), levels = levels(clean_results$GROUP)),
+  MT_article  = c(3.53, 1.17, 0.92),
+  nSM_article = c(7.52, 1.84, 1.99)
+)
+
+clean_results %>%
+  group_by(GROUP) %>%
+  summarise(MT_ours    = mean(MovementTime),
+            peaks_ours = mean(NbVelPeaks)) %>%
+  left_join(table2, by = "GROUP") %>%
+  select(GROUP, MT_ours, MT_article, peaks_ours, nSM_article) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Group", "Mean MT, ours (s)", "Mean MT, article (s)",
+                             "Velocity peaks, ours", "Sub-movements, article"))
+```
+
+The movement times of the controls match the article within 0.04 s, and those of the patients are longer in our file. The number of velocity peaks is higher in our file for the three groups, and much higher for the patients. If the two columns measure the same thing, the movements in `Results.txt` were not parsed exactly as in the article. This does not prove that parsing explains the longer movement times of the patients, but it is the only explanation we found that is compatible with everything above: same participants, same number of movements, same way of computing the equations, and a difference that is concentrated in the most fragmented movements.
