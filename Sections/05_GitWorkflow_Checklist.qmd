@@ -91,46 +91,46 @@ We ticked each line on the final version of the report, just before uploading th
 
 **Repository**
 
--   [ ] The repository is public and named `IEAP-Series03-RStudio` (checked by opening the link of this report in a private browser window)
--   [ ] `main` is up to date: every pull request is merged and no branch is ahead of `main`
--   [ ] `README.md` describes the project, the structure of the repository, the team and how to render the report
--   [ ] `LICENSE` file present
--   [ ] `IEAP-Series03-Rstudio.qmd` (master document) renders without error
--   [ ] `IEAP-Series03-Rstudio.pdf` on `main` is the render of the last state of the report, and is the file uploaded to Moodle
--   [ ] No system file is tracked (`.DS_Store`)
+-   [x] The repository is public and named `IEAP-Series03-RStudio` (checked by opening the link of this report in a private browser window)
+-   [x] `main` is up to date: every pull request is merged and no branch is ahead of `main`
+-   [x] `README.md` describes the project, the structure of the repository, the team and how to render the report
+-   [x] `LICENSE` file present
+-   [x] `IEAP-Series03-Rstudio.qmd` (master document) renders without error
+-   [x] `IEAP-Series03-Rstudio.pdf` on `main` is the render of the last state of the report, and is the file uploaded to Moodle
+-   [x] No system file is tracked (`.DS_Store`)
 
 **Structure of the report**
 
--   [ ] The master document contains no analysis: each part is a file in `Sections/`, included at render time
--   [ ] No included file has its own YAML header
--   [ ] Every chunk has a label, and each label is used once
+-   [x] The master document contains no analysis: each part is a file in `Sections/`, included at render time
+-   [x] No included file has its own YAML header
+-   [x] Every chunk has a label, and each label is used once
 
 **Git history**
 
--   [ ] At least one commit for each question of the series (1.1 to 1.7)
--   [ ] Commit messages say what changed
--   [ ] One branch per section, merged into `main` through a pull request
--   [ ] No commit directly on `main` since the first pull request
--   [ ] Every team member has commits in the history
--   [ ] The section *What actually happened* describes the history as it is on GitHub
+-   [x] At least one commit for each question of the series (1.1 to 1.7)
+-   [x] Commit messages say what changed
+-   [x] One branch per section, merged into `main` through a pull request
+-   [x] No commit directly on `main` since the first pull request
+-   [x] Every team member has commits in the history
+-   [x] The section *What actually happened* describes the history as it is on GitHub
 
 **Content asked in the assignment**
 
--   [ ] Authors and date in the header
--   [ ] Clickable link to the public GitHub repository
--   [ ] Analysis of our Git workflow
--   [ ] Challenges encountered and lessons learned
--   [ ] Complete code visible in the PDF
--   [ ] 1.1 to 1.3: question, data reorganization, ANOVA and the sentence for the report
--   [ ] 1.4: regression equations by group
--   [ ] 1.5: graph with regression lines and equations
--   [ ] 1.6: graph exported as a PDF of 8 $\times$ 6 inches, present in `figures/`
--   [ ] 1.7: discussion of the differences with the article
--   [ ] Data sources with their URLs
--   [ ] Scientific reference with its DOI
--   [ ] This checklist
+-   [x] Authors and date in the header
+-   [x] Clickable link to the public GitHub repository
+-   [x] Analysis of our Git workflow
+-   [x] Challenges encountered and lessons learned
+-   [x] Complete code visible in the PDF
+-   [x] 1.1 to 1.3: question, data reorganization, ANOVA and the sentence for the report
+-   [x] 1.4: regression equations by group
+-   [x] 1.5: graph with regression lines and equations
+-   [x] 1.6: graph exported as a PDF of 8 $\times$ 6 inches, present in `figures/`
+-   [x] 1.7: discussion of the differences with the article
+-   [x] Data sources with their URLs
+-   [x] Scientific reference with its DOI
+-   [x] This checklist
 
 **Before uploading**
 
--   [ ] Every sentence that interprets a number was read again next to the table or figure it describes
+-   [x] Every sentence that interprets a number was read again next to the table or figure it describes
 
