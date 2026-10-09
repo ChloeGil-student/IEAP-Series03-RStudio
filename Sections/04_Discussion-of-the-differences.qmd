@@ -1,5 +1,317 @@
----
-title: "04_Discussion-of-the-differences"
-format: html
-editor: visual
----
+## Discussion: differences with the article
+
+The series tells us that the method of the article was more sophisticated than ours and not fully disclosed. We cannot redo that method, so we ask three questions that our data can answer: how large the differences are, how well our own equations are determined, and where in the data the differences come from. We then check the ANOVA of section 1.3 with tests that need fewer assumptions, and conclude.
+
+### How large are the differences?
+
+Comparing intercepts is misleading, because they are extrapolations (section 1.4). We compare what the two sets of equations predict where the data are, at 3.80 and 5.43 bits. The equations of the article are typed from its Fig. 3.
+
+```{r article-equations}
+article <- tibble(
+  GROUP     = factor(c("pp", "ap", "cp"), levels = levels(clean_results$GROUP)),
+  intercept = c(0.422, 0.622, 0.475),
+  slope     = c(0.672, 0.118, 0.097)
+)
+
+bind_rows("Article (Fig. 3)" = article,
+          "Ours"             = select(regression_by_group, GROUP, intercept, slope),
+          .id = "source") %>%
+  mutate(MT_easy = intercept + slope * 3.80,
+         MT_hard = intercept + slope * 5.43) %>%
+  arrange(GROUP) %>%
+  select(GROUP, source, intercept, slope, MT_easy, MT_hard) %>%
+  knitr::kable(digits = c(0, 0, 3, 3, 2, 2),
+               col.names = c("Group", "Source", "Intercept (s)", "Slope (s/bit)",
+                             "MT at 3.80 bits (s)", "MT at 5.43 bits (s)"))
+```
+
+For the two control groups, the article and our analysis predict movement times that differ by less than 0.1 s, even though the intercepts look different (0.62 against 0.37 s for the age-matched group). For the patients, our movement times are longer at both levels, and the gap is about three times larger at the difficult level. This is why our slope is steeper and, by extrapolation, our intercept negative. The disagreement is about the patients.
+
+The ANOVA gives a similar picture:
+
+```{r anova-comparison}
+tibble(
+  Effect      = c("GROUP", "ID", "GROUP:ID"),
+  F_article   = c(35.32, 5.42, 10.02),
+  F_ours      = a[Effect, "F"],
+  ges_article = c(0.67, 0.03, 0.03),
+  ges_ours    = a[Effect, "ges"]
+) %>%
+  knitr::kable(digits = 2)
+
+```
+
+The F values of GROUP and of the interaction are close. For ID we cannot compare: the article reports F(1, 48) = 5.42 with p = 0.0000, but this F value corresponds to p = `r round(pf(5.42, 1, 48, lower.tail = FALSE), 3)`, so one of the two numbers is probably a typing error.
+
+The 48 degrees of freedom are useful for another reason. With three groups they correspond to 51 participants, so the article kept all 19 patients. Whatever explains the different equations, it is not that some participants were left out.
+
+### How well do we know our own equations?
+
+In section 1.4 we did not report the uncertainty of the coefficients, because `lm()` on all movements treats them as independent. We can get it another way. With two levels of difficulty, each participant has their own line through their two mean movement times:
+
+```{r participant-lines}
+participant_lines <- subject_means %>%
+  select(GROUP, SUBJ, ID, MovementTime) %>%
+  pivot_wider(names_from = ID, values_from = MovementTime) %>%
+  mutate(mean_MT    = (ID1 + ID2) / 2,
+         difference = ID2 - ID1,
+         ratio      = ID2 / ID1,
+         slope      = difference / (5.43 - 3.80),
+         intercept  = ID1 - slope * 3.80)
+```
+
+Because every participant has the same number of movements, the mean of the individual slopes is the slope of the group in section 1.4. This also answers a question we had at the start, whether averaging per participant before the regression could explain the difference with the article. It cannot:
+
+```{r check-participant-lines}
+mean_slopes <- participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(slope = mean(slope))
+
+all.equal(mean_slopes$slope, regression_by_group$slope)
+```
+
+The individual lines give us what was missing, the spread between participants, and therefore a 95 % confidence interval for each coefficient (Student's t on the participants of a group).
+
+```{r confidence-intervals}
+# mean and 95 % confidence interval as text, e.g. "0.90 [0.47, 1.32]"
+mean_ci <- function(x) {
+  half <- qt(0.975, length(x) - 1) * sd(x) / sqrt(length(x))
+  sprintf("%.2f [%.2f, %.2f]", mean(x), mean(x) - half, mean(x) + half)
+}
+
+participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(n = n(),
+            intercept_ours = mean_ci(intercept),
+            slope_ours     = mean_ci(slope)) %>%
+  left_join(article, by = "GROUP") %>%
+  select(GROUP, n, intercept_ours, intercept_article = intercept,
+         slope_ours, slope_article = slope) %>%
+  knitr::kable(digits = 3,
+               col.names = c("Group", "n", "Our intercept [95 % CI]", "Article",
+                             "Our slope [95 % CI]", "Article"))
+```
+
+For the patients the intervals are wide: the intercept could be anywhere within about 1.5 s on either side of zero, and the slope is known to within a factor of almost three. The values of the article are inside both intervals. Our negative intercept is therefore not a result. With 19 patients, the data do not say whether the intercept is negative or positive.
+
+The article does the same thing as we do here: it treats the slope and the intercept as values of each participant and compares the intercepts between groups, without finding a difference (F(2, 48) = 0.17, p = 0.84). The same test on our individual intercepts:
+
+```{r intercept-anova}
+summary(aov(intercept ~ GROUP, data = participant_lines))
+```
+
+Our intercepts do not differ between groups either. On this point the two analyses agree, even though the patient intercepts have opposite signs.
+
+For the controls it is the opposite. The intervals are narrow, and the intercept of the article for the age-matched group is outside ours, although the two equations predict the same movement times within 0.1 s. A small difference is visible there because the controls resemble each other.
+
+These intervals need one caution. They describe what would change with other participants. The article very probably analysed the same participants as our file (same three group sizes), so sampling cannot be the cause of the difference between its equations and ours. The intervals tell us how much weight the equations can carry, not why the two analyses differ. For that we have to look inside the patient group.
+
+### Where the difference comes from: three patients
+
+```{r patient-lines}
+long_by_patient <- clean_results %>%
+  filter(MovementTime >= 10) %>%
+  count(SUBJ, name = "movements_over_10_s")
+
+patients_with_ID3 <- Results %>%
+  filter(GROUP == "pp", ID == "ID3") %>%
+  distinct(SUBJ) %>%
+  pull(SUBJ)
+
+patients <- participant_lines %>%
+  filter(GROUP == "pp") %>%
+  left_join(long_by_patient, by = "SUBJ") %>%
+  mutate(movements_over_10_s = replace_na(movements_over_10_s, 0),
+         did_ID3 = ifelse(SUBJ %in% patients_with_ID3, "yes", "no")) %>%
+  arrange(desc(slope))
+
+patients %>%
+  select(SUBJ, ID1, ID2, slope, intercept, movements_over_10_s, did_ID3) %>%
+  knitr::kable(digits = 2,
+                             col.names = c("Patient", "MT ID1 (s)", "MT ID2 (s)",
+                             "Slope", "Intercept", "Long mov.", "ID3"))
+```
+
+```{r steep-patients}
+#| include: false
+# The limit of 2 s/bit falls in the empty space between the two sets of slopes
+steep  <- filter(patients, slope > 2)
+others <- filter(patients, slope <= 2)
+
+n_long_all   <- sum(patients$movements_over_10_s)
+n_long_steep <- sum(steep$movements_over_10_s)
+```
+
+The slopes of the patients do not form one cloud around 0.9 s/bit. `r nrow(others)` patients have a slope between `r round(min(others$slope), 2)` and `r round(max(others$slope), 2)` s/bit, and `r nrow(steep)` patients (`r paste(steep$SUBJ, collapse = ", ")`) have a slope between `r round(min(steep$slope), 2)` and `r round(max(steep$slope), 2)` s/bit, with nothing in between. The median slope of the 19 patients is `r round(median(patients$slope), 2)` s/bit, which is close to the article (0.672), whereas the mean is `r round(mean(patients$slope), 2)`. Our group equation is a mean, and it is pulled by these `r nrow(steep)` patients.
+
+The table below shows how much. Below the table, the two numbers are the lowest and highest intercepts obtained when the equation is recomputed 19 times, each time without one patient.
+
+```{r leave-one-out}
+line_of <- function(data) {
+  summarise(data, intercept = mean(intercept), slope = mean(slope))
+}
+
+leave_one_out <- map_dfr(as.character(patients$SUBJ),
+                         \(s) line_of(filter(patients, SUBJ != s)))
+
+bind_rows(
+  "Article (Fig. 3)"            = filter(article, GROUP == "pp") %>% select(intercept, slope),
+  "Ours, 19 patients"           = line_of(patients),
+  "Ours, without the steepest patients" = line_of(others),
+  .id = "equation"
+) %>%
+  mutate(MT_easy = intercept + slope * 3.80,
+         MT_hard = intercept + slope * 5.43) %>%
+  knitr::kable(digits = c(0, 3, 3, 2, 2),
+               col.names = c("Equation of the patients", "Intercept (s)", "Slope (s/bit)",
+                             "MT at 3.80 bits (s)", "MT at 5.43 bits (s)"))
+
+range(leave_one_out$intercept)
+```
+
+Leaving out a single patient is enough to move the intercept from one side of zero to the other. Without the `r nrow(steep)` steepest patients, the intercept is positive and the predicted movement times are close to those of the article, slightly below. We do not propose to remove these patients: the article did not (see the degrees of freedom above), and they are probably the patients for whom the task says the most. The point is that the equation of the patient group describes two kinds of patients with one line.
+
+Our first idea had been to look at very long movements instead of participants. It leads to the same place: `r n_long_all` movements last 10 s or more, all of them in the patient group, and `r n_long_steep` of them come from these `r nrow(steep)` patients. The file also tells us what these movements are, through a column that we had not used so far:
+
+```{r velocity-peaks}
+clean_results %>%
+  filter(GROUP == "pp") %>%
+  group_by(duration = ifelse(MovementTime >= 10, "10 s or more", "under 10 s")) %>%
+  summarise(movements    = n(),
+            median_peaks = median(NbVelPeaks))
+```
+
+The long movements have many more velocity peaks than the others. They are not recording errors with an impossible duration; they are movements made of many small sub-movements. So there is no reason in our data to discard them. In the article, movement time ends at "the first velocity minimum that was within the target" [@mottet2017, Data analysis]. For a movement made of many sub-movements, where this end is placed depends on how the velocity signal is filtered and parsed, and a different choice could shorten these movements a lot, mainly for these patients and at the difficult level. We only have the final values, so we cannot redo the parsing. But we can check whether our file was processed like the data of the article, by comparing group means with its Table 2. We assume that `NbVelPeaks` is what the article calls the number of sub-movements, which it counts as the number of velocity maxima.
+
+```{r compare-table2}
+table2 <- tibble(
+  GROUP       = factor(c("pp", "ap", "cp"), levels = levels(clean_results$GROUP)),
+  MT_article  = c(3.53, 1.17, 0.92),
+  nSM_article = c(7.52, 1.84, 1.99)
+)
+
+clean_results %>%
+  group_by(GROUP) %>%
+  summarise(MT_ours    = mean(MovementTime),
+            peaks_ours = mean(NbVelPeaks)) %>%
+  left_join(table2, by = "GROUP") %>%
+  select(GROUP, MT_ours, MT_article, peaks_ours, nSM_article) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Group", "Mean MT, ours (s)", "Mean MT, article (s)",
+                             "Velocity peaks, ours", "Sub-movements, article"))
+```
+
+The movement times of the controls match the article within 0.04 s, and those of the patients are longer in our file. The number of velocity peaks is higher in our file for the three groups, and much higher for the patients. If the two columns measure the same thing, the movements in `Results.txt` were not parsed exactly as in the article. This does not prove that parsing explains the longer movement times of the patients, but it is the only explanation we found that is compatible with everything above: same participants, same number of movements, same way of computing the equations, and a difference that is concentrated in the most fragmented movements.
+
+### The patients who did not do ID3
+
+The last column of the table of patients shows something we had treated as a simple gap in section 1.3. The patients who did not do the third level of difficulty are not a random half of the group:
+
+```{r id3-not-random}
+patients %>%
+  group_by(did_ID3) %>%
+  summarise(patients = n(),
+            MT_ID1   = mean(ID1),
+            MT_ID2   = mean(ID2),
+            steepest = sum(slope > 2)) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Did ID3", "Patients", "Mean MT at ID1 (s)",
+                             "Mean MT at ID2 (s)", "Among the steepest"))
+
+test_ID3 <- wilcox.test(ID2 ~ did_ID3, data = patients)
+```
+
+```{r report-p}
+#| include: false
+report_p <- function(p) ifelse(p < .001, "p < .001", sprintf("p = %.3f", p))
+```
+
+The patients without `ID3` are about twice as slow on the two levels that everybody did (Wilcoxon rank-sum test on the movement time at `ID2`, `r report_p(test_ID3$p.value)`), and the steepest patients are all among them. The simplest explanation is that the hardest level was not feasible, or not proposed, for the most affected patients.
+
+We can look at this with Table 1 of the article, which gives for each patient the Enjalbert score, a prehension score from 0 (no motricity) to 6 (sub-normal). The patient numbers of the table (P01 to P29) are those of our file.
+
+```{r enjalbert}
+table1 <- tibble(
+  SUBJ      = sprintf("ppS%02d", c(1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14,
+                                   16, 20, 21, 22, 23, 25, 29)),
+  enjalbert = c(5, 3, 2, 4, 2, 4, 2, 3, 2, 3, 4, 5, 6, 2, 2, 3, 3, 2, 5)
+)
+
+patients_clinical <- patients %>%
+  mutate(SUBJ = as.character(SUBJ)) %>%
+  left_join(table1, by = "SUBJ")
+
+stopifnot(!anyNA(patients_clinical$enjalbert))  # every patient found in Table 1
+
+patients_clinical %>%
+  group_by(did_ID3) %>%
+  summarise(patients = n(), mean_enjalbert = mean(enjalbert))
+
+cor_enjalbert  <- cor.test(patients_clinical$enjalbert, patients_clinical$mean_MT,
+                           method = "spearman")
+test_enjalbert <- wilcox.test(enjalbert ~ did_ID3, data = patients_clinical)
+```
+
+The scores go in the expected direction but do not settle the question. Patients with a lower score tend to be slower (Spearman correlation between the score and the mean movement time: `r round(cor_enjalbert$estimate, 2)`, `r report_p(cor_enjalbert$p.value)`), and the patients without `ID3` have a lower score on average, but this difference could be due to chance (`r report_p(test_enjalbert$p.value)`). The `r nrow(steep)` steepest patients have scores of `r paste(patients_clinical$enjalbert[patients_clinical$slope > 2], collapse = ", ")`, in the middle of the scale. So the patients without `ID3` are clearly the slower ones on this task, but we cannot say that they are the more impaired ones clinically. The article gives the same limit: there was no systematic assessment of the severity of the impairment.
+
+This changes how we see our decision of section 1.3. Removing `ID3` was not only a matter of having complete cells. An analysis that kept `ID3` with the patients who did it would have described the faster half of the patients and presented it as the patient group.
+
+### More sensitive to difficulty: in seconds or in proportion?
+
+Our sentence in section 1.3 says that difficulty costs more to the patients. In seconds it does. But the patients are also about three to four times slower at the easy level, and a group that is slower by a constant factor would have a steeper line without being more sensitive to difficulty. To separate the two, we look at the ratio of the two movement times of each participant.
+
+```{r relative-cost}
+participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(difference_s = mean(difference),
+            ratio        = mean(ratio)) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Group", "MT at ID2 minus MT at ID1 (s)",
+                             "MT at ID2 divided by MT at ID1"))
+
+test_ratio <- kruskal.test(ratio ~ GROUP, data = participant_lines)
+```
+
+Going from the easy to the difficult level adds about a quarter to the movement time of the controls and about a half to that of the patients. The difference between groups is still there (Kruskal-Wallis test on the ratios, `r report_p(test_ratio$p.value)`), but it is much less clear than in seconds, and it would not pass the threshold of .01 used in the article. "Five to seven times steeper" and "about twice the relative cost" describe the same data. Most of the difference between the slopes comes from the fact that the patients are slower everywhere.
+
+### Checking the ANOVA without assuming equal variances
+
+In section 1.3 we saw that the standard deviation between participants is about `r round(max(cell_means$sd) / min(cell_means$sd))` times larger for the patients than for the young controls, which the ANOVA does not allow. With two levels of ID the check is simple, because the two effects that involve GROUP reduce to one number per participant: the main effect of GROUP compares the participants' mean movement time (`mean_MT`), and the GROUP $\times$ ID interaction compares their difference between the two levels (`difference`). We test both with rank tests, which make no assumption about variances.
+
+```{r rank-tests}
+test_group       <- kruskal.test(mean_MT ~ GROUP, data = participant_lines)
+test_interaction <- kruskal.test(difference ~ GROUP, data = participant_lines)
+
+# Which groups differ? Wilcoxon tests two by two, Holm correction
+pairs_group <- pairwise.wilcox.test(participant_lines$mean_MT,
+                                    participant_lines$GROUP,
+                                    p.adjust.method = "holm")
+pairs_interaction <- pairwise.wilcox.test(participant_lines$difference,
+                                          participant_lines$GROUP,
+                                          p.adjust.method = "holm")
+
+pairs_group$p.value
+pairs_interaction$p.value
+```
+
+Both effects are confirmed (Kruskal-Wallis, GROUP: `r report_p(test_group$p.value)`; interaction: `r report_p(test_interaction$p.value)`), so the conclusion of section 1.3 does not depend on the assumption that was violated.
+
+The comparisons two by two give the post-hoc information that was missing in section 1.3. For the effect of difficulty (second table), the patients differ from both control groups and the two control groups do not differ from each other, as in the article. For the overall movement time (first table), the patients again differ from both control groups, but the two control groups also differ from each other: the age-matched controls are about 0.2 s slower than the young ones. On the graph of section 1.5 the two control lines look identical only because the axis is scaled for the patients.
+
+The article reports that the two control groups do not differ (Tukey contrasts, p = 0.79). We find the same when we use the same kind of test:
+
+```{r tukey-controls}
+TukeyHSD(aov(mean_MT ~ GROUP, data = participant_lines))$GROUP
+```
+
+The two results do not contradict each other. Tukey's test compares each difference with a variability pooled over the three groups, and here this variability is mostly that of the patients. A difference of 0.2 s between controls is small compared with it, although it is large compared with the variability of the controls themselves. The rank test does not pool the variances. That the age-matched controls are a little slower than the young ones is therefore likely, but it is a small effect next to the effect of stroke.
+
+These tests were chosen after looking at the data, so they are checks of our first analysis, not new confirmatory results.
+
+### Are the conclusions similar?
+
+For what the article concludes, yes. The three effects of the ANOVA are significant in both analyses, the F values of GROUP and of the interaction are of the same order, rank tests confirm them, and the patients differ from both control groups. The movement times of the controls agree with the article within 0.1 s, and the intercepts do not differ between groups in either analysis.
+
+For the equation of the patients, the question is not well posed. Our intercept has the opposite sign, but its confidence interval covers more than a second on each side of zero and one patient decides the sign. The article is careful on the same point: its intercepts do not differ between groups and the authors interpret this "with caution, because extrapolations are very sensitive to errors" [@mottet2017, Discussion]. The difference that deserves attention is the slope, and it comes from `r nrow(steep)` patients whose long, fragmented movements are longer in our file than they seem to be in the data behind the published figure.
+
+Two things in our data go beyond the comparison. The statement that patients are five to seven times more sensitive to difficulty holds in seconds; in proportion to their own speed it is about twice. And "the patients" is not one homogeneous group in this file: the slower half did not do the third level, and three of them account for most of the difference between our equation and the published one.

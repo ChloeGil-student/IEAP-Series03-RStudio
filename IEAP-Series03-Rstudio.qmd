@@ -63,6 +63,7 @@ cat(readLines(here("R", "setup.R")), sep = "\n")
 {{< include Sections/01_Data-reorganisation.qmd >}}
 {{< include Sections/02_Linear-regression-by-group.qmd >}}
 {{< include Sections/03_Save-the-graph.qmd >}}
+{{< include Sections/04_Discussion-of-the-differences.qmd >}}
 
 # Data sources {.unnumbered}
 
