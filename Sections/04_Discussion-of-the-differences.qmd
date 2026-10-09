@@ -44,3 +44,79 @@ tibble(
 The F values of GROUP and of the interaction are close. For ID we cannot compare: the article reports F(1, 48) = 5.42 with p = 0.0000, but this F value corresponds to p = `r round(pf(5.42, 1, 48, lower.tail = FALSE), 3)`, so one of the two numbers is probably a typing error.
 
 The 48 degrees of freedom are useful for another reason. With three groups they correspond to 51 participants, so the article kept all 19 patients. Whatever explains the different equations, it is not that some participants were left out.
+
+### How well do we know our own equations?
+
+In section 1.4 we did not report the uncertainty of the coefficients, because `lm()` on all movements treats them as independent. We can get it another way. With two levels of difficulty, each participant has their own line through their two mean movement times:
+
+```{r participant-lines}
+participant_lines <- subject_means %>%
+  select(GROUP, SUBJ, ID, MovementTime) %>%
+  pivot_wider(names_from = ID, values_from = MovementTime) %>%
+  mutate(mean_MT    = (ID1 + ID2) / 2,
+         difference = ID2 - ID1,
+         ratio      = ID2 / ID1,
+         slope      = difference / (5.43 - 3.80),
+         intercept  = ID1 - slope * 3.80)
+```
+
+Because every participant has the same number of movements, the mean of the individual slopes is the slope of the group in section 1.4. This also answers a question we had at the start, whether averaging per participant before the regression could explain the difference with the article. It cannot:
+
+```{r check-participant-lines}
+mean_slopes <- participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(slope = mean(slope))
+
+all.equal(mean_slopes$slope, regression_by_group$slope)
+```
+
+The individual lines give us what was missing, the spread between participants, and therefore a 95 % confidence interval for each coefficient (Student's t on the participants of a group).
+
+```{r confidence-intervals}
+# mean and 95 % confidence interval as text, e.g. "0.90 [0.47, 1.32]"
+mean_ci <- function(x) {
+  half <- qt(0.975, length(x) - 1) * sd(x) / sqrt(length(x))
+  sprintf("%.2f [%.2f, %.2f]", mean(x), mean(x) - half, mean(x) + half)
+}
+
+participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(n = n(),
+            intercept_ours = mean_ci(intercept),
+            slope_ours     = mean_ci(slope)) %>%
+  left_join(article, by = "GROUP") %>%
+  select(GROUP, n, intercept_ours, intercept_article = intercept,
+         slope_ours, slope_article = slope) %>%
+  knitr::kable(digits = 3,
+               col.names = c("Group", "n", "Our intercept [95 % CI]", "Article",
+                             "Our slope [95 % CI]", "Article"))
+```
+
+For the patients the intervals are wide: the intercept could be anywhere within about 1.5 s on either side of zero, and the slope is known to within a factor of almost three. The values of the article are inside both intervals. Our negative intercept is therefore not a result. With 19 patients, the data do not say whether the intercept is negative or positive.
+
+The article does the same thing as we do here: it treats the slope and the intercept as values of each participant and compares the intercepts between groups, without finding a difference (F(2, 48) = 0.17, p = 0.84). The same test on our individual intercepts:
+
+```{r intercept-anova}
+summary(aov(intercept ~ GROUP, data = participant_lines))
+```
+
+Our intercepts do not differ between groups either. On this point the two analyses agree, even though the patient intercepts have opposite signs.
+
+For the controls it is the opposite. The intervals are narrow, and the intercept of the article for the age-matched group is outside ours, although the two equations predict the same movement times within 0.1 s. A small difference is visible there because the controls resemble each other.
+
+These intervals need one caution. They describe what would change with other participants. The article very probably analysed the same participants as our file (same three group sizes), so sampling cannot be the cause of the difference between its equations and ours. The intervals tell us how much weight the equations can carry, not why the two analyses differ. For that we have to look inside the patient group.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
