@@ -256,3 +256,21 @@ test_enjalbert <- wilcox.test(enjalbert ~ did_ID3, data = patients_clinical)
 The scores go in the expected direction but do not settle the question. Patients with a lower score tend to be slower (Spearman correlation between the score and the mean movement time: `r round(cor_enjalbert$estimate, 2)`, `r report_p(cor_enjalbert$p.value)`), and the patients without `ID3` have a lower score on average, but this difference could be due to chance (`r report_p(test_enjalbert$p.value)`). The `r nrow(steep)` steepest patients have scores of `r paste(patients_clinical$enjalbert[patients_clinical$slope > 2], collapse = ", ")`, in the middle of the scale. So the patients without `ID3` are clearly the slower ones on this task, but we cannot say that they are the more impaired ones clinically. The article gives the same limit: there was no systematic assessment of the severity of the impairment.
 
 This changes how we see our decision of section 1.3. Removing `ID3` was not only a matter of having complete cells. An analysis that kept `ID3` with the patients who did it would have described the faster half of the patients and presented it as the patient group.
+
+### More sensitive to difficulty: in seconds or in proportion?
+
+Our sentence in section 1.3 says that difficulty costs more to the patients. In seconds it does. But the patients are also about three to four times slower at the easy level, and a group that is slower by a constant factor would have a steeper line without being more sensitive to difficulty. To separate the two, we look at the ratio of the two movement times of each participant.
+
+```{r relative-cost}
+participant_lines %>%
+  group_by(GROUP) %>%
+  summarise(difference_s = mean(difference),
+            ratio        = mean(ratio)) %>%
+  knitr::kable(digits = 2,
+               col.names = c("Group", "MT at ID2 minus MT at ID1 (s)",
+                             "MT at ID2 divided by MT at ID1"))
+
+test_ratio <- kruskal.test(ratio ~ GROUP, data = participant_lines)
+```
+
+Going from the easy to the difficult level adds about a quarter to the movement time of the controls and about a half to that of the patients. The difference between groups is still there (Kruskal-Wallis test on the ratios, `r report_p(test_ratio$p.value)`), but it is much less clear than in seconds, and it would not pass the threshold of .01 used in the article. "Five to seven times steeper" and "about twice the relative cost" describe the same data. Most of the difference between the slopes comes from the fact that the patients are slower everywhere.
