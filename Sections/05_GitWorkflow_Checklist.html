@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>gitworkflow_checklist</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="05_GitWorkflow_Checklist_files/libs/clipboard/clipboard.min.js"></script>
+<script src="05_GitWorkflow_Checklist_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="05_GitWorkflow_Checklist_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="05_GitWorkflow_Checklist_files/libs/quarto-html/popper.min.js"></script>
+<script src="05_GitWorkflow_Checklist_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="05_GitWorkflow_Checklist_files/libs/quarto-html/anchor.min.js"></script>
+<link href="05_GitWorkflow_Checklist_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="05_GitWorkflow_Checklist_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="05_GitWorkflow_Checklist_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="05_GitWorkflow_Checklist_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="05_GitWorkflow_Checklist_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<section id="our-git-workflow" class="level1">
+<h1>Our Git workflow</h1>
+<section id="the-strategy-we-chose" class="level2">
+<h2 class="anchored" data-anchor-id="the-strategy-we-chose">The strategy we chose</h2>
+<p>Three people write one report. If we all edit the same file, Git cannot merge our work without conflicts. Two decisions follow from this.</p>
+<p><strong>One file per part of the series.</strong> The master document <code>IEAP-Series03-Rstudio.qmd</code> contains only the header, the setup and the list of included files. Each part of the analysis is a separate file in <code>Sections/</code> with one owner, included at render time. The only file that several people touch is the master document, where each section adds one <code>include</code> line.</p>
+<p><strong>One place for what is shared.</strong> The sections are not independent: the graph needs the regression, and the discussion needs everything. What all sections need from the start (libraries, loading and cleaning the data) is in <code>R/setup.R</code>, sourced once by the master document. The other objects are created in the section that explains them and reused later (<code>cell_means</code> from 1.3 in the graph, <code>fit_by_group()</code> from 1.4 in the discussion). Nothing is computed twice.</p>
+<p>The second decision has a cost that we only understood later: a section cannot be rendered before the sections it depends on are on <code>main</code>. The branches therefore cannot be merged in any order.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 40%">
+<col style="width: 14%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Branch</th>
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Owner</th>
+<th style="text-align: left;">Needs on <code>main</code> first</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>Chloe_01</code></td>
+<td style="text-align: left;"><code>Sections/01_Data-reorganisation.qmd</code></td>
+<td style="text-align: left;">Chloé</td>
+<td style="text-align: left;">project skeleton</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>master-document</code></td>
+<td style="text-align: left;"><code>IEAP-Series03-Rstudio.qmd</code>, <code>references.bib</code></td>
+<td style="text-align: left;">Chloé</td>
+<td style="text-align: left;">section 01</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>Charles-02</code></td>
+<td style="text-align: left;"><code>Sections/02_Linear-regression-by-group.qmd</code></td>
+<td style="text-align: left;">Charles</td>
+<td style="text-align: left;">section 01</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>Tuba_03</code></td>
+<td style="text-align: left;"><code>Sections/03_Save-the-graph.qmd</code></td>
+<td style="text-align: left;">Tuba</td>
+<td style="text-align: left;">sections 01 and 02</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>Chloe_04</code></td>
+<td style="text-align: left;"><code>Sections/04_Discussion-of-the-differences.qmd</code></td>
+<td style="text-align: left;">Chloé</td>
+<td style="text-align: left;">sections 01 and 02</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>05-GitWorkflow_checklist</code></td>
+<td style="text-align: left;"><code>Sections/05_GitWorkflow_Checklist.qmd</code></td>
+<td style="text-align: left;">Chloé</td>
+<td style="text-align: left;">nothing</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>final</code></td>
+<td style="text-align: left;">corrections after proofreading, <code>README.md</code>, final PDF</td>
+<td style="text-align: left;">Chloé</td>
+<td style="text-align: left;">everything</td>
+</tr>
+</tbody>
+</table>
+<p>The cycle for one branch is: update the branch from <code>main</code>, write the section with at least one commit per question of the series, render the master document, push, open a pull request, merge, and everybody updates.</p>
+</section>
+<section id="what-actually-happened" class="level2">
+<h2 class="anchored" data-anchor-id="what-actually-happened">What actually happened</h2>
+<p>The history of the repository does not follow this plan from the start, and we prefer to describe it as it is.</p>
+<p><strong>6 October: a start without a strategy.</strong> The repository, the data, the RStudio project and four empty section files were committed directly on <code>main</code> (7 commits). The three personal branches were created the same day, before the structure of the project was decided. A first version of section 01 was written on <code>Chloe_01</code>, with its own code to load and clean the data.</p>
+<p><strong>8 October: reorganization.</strong> We introduced <code>R/setup.R</code> and the use of <code>here()</code>, and section 01 was written again on the same branch so that it relies on the shared setup. Both versions are visible in the history of <code>Chloe_01</code> (commits of 6 October, then from <code>a06fff0</code> on 8 October). The master document was written on a separate branch, <code>master-document</code>. Two pull requests brought this work to <code>main</code>: #1 (<code>Chloe_01</code>) and #2 (<code>master-document</code>).</p>
+<p><strong>9 October, morning: branches that were out of date.</strong> The branches created on 6 October had not moved while <code>main</code> advanced: <code>Charles-02</code> and <code>Tuba_03</code> were 26 and 25 commits behind <code>main</code>, and <code>master-document</code> was 3 behind after pull request #1. A branch does not follow <code>main</code> by itself. <code>master-document</code> was updated with a pull request in the opposite direction (#3, from <code>main</code> into the branch), and <code>Charles-02</code> and <code>Tuba_03</code> were updated from <code>main</code> before any work started on them.</p>
+<p><strong>9 October: the sections, one after the other.</strong> The remaining sections reached <code>main</code> in the order of their dependencies:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 79%">
+<col style="width: 6%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Pull request</th>
+<th style="text-align: left;">Branch</th>
+<th style="text-align: left;">Content</th>
+<th style="text-align: left;">Merged at</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">#4</td>
+<td style="text-align: left;"><code>Charles-02</code></td>
+<td style="text-align: left;">section 1.4, regression by group (4 commits)</td>
+<td style="text-align: left;">11:06</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">#5</td>
+<td style="text-align: left;"><code>master-document</code></td>
+<td style="text-align: left;"><code>include</code> line for section 02</td>
+<td style="text-align: left;">11:55</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">#6</td>
+<td style="text-align: left;"><code>Tuba_03</code></td>
+<td style="text-align: left;">sections 1.5 and 1.6, graph and PDF export, with its <code>include</code> line (3 commits)</td>
+<td style="text-align: left;">12:41</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">#8</td>
+<td style="text-align: left;"><code>Chloe_04</code></td>
+<td style="text-align: left;">section 1.7, discussion, with its <code>include</code> line (9 commits)</td>
+<td style="text-align: left;">13:55</td>
+</tr>
+</tbody>
+</table>
+<p>Pull request #5 shows the problem of out-of-date branches a second time. The <code>include</code> line for section 02 was committed on <code>master-document</code>, which did not contain section 02 itself, because that section had reached <code>main</code> through #4. The branch had to be updated from <code>main</code> before the report could be rendered with the new section. From #6 on, each section branch added its own <code>include</code> line, which is simpler.</p>
+<p>The last two branches are <code>05-GitWorkflow_checklist</code>, for this part of the report, and <code>final</code>, for the corrections found when proofreading the complete PDF (sections 1.1 to 1.3 and 1.7), the <code>README.md</code> and the final render. <code>final</code> is merged last, after being updated from <code>main</code>, so that the PDF on <code>main</code> is the render of the last state of the report.</p>
+</section>
+<section id="what-we-think-of-our-own-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="what-we-think-of-our-own-workflow">What we think of our own workflow</h2>
+<p><strong>What worked.</strong> One file per section did what it was meant to do: there was no merge conflict in the text of the report. The shared <code>R/setup.R</code> removed the copies of the cleaning code that existed in the first version. Pull requests gave a readable history of <code>main</code> after 8 October: each merge commit corresponds to one part of the report.</p>
+<p><strong>What did not.</strong></p>
+<ul>
+<li><em>Branches were created too early.</em> Creating all branches on the first day looked organized, but a branch is a copy of <code>main</code> at the moment it is created. Each of them had to be updated before it could be used. A branch should be created when the work on it starts.</li>
+<li><em>Section 01 was written twice.</em> Writing the analysis before agreeing on what is shared cost one full rewrite. The decision about <code>R/setup.R</code> should have come before the first section.</li>
+<li><em>Dependencies between sections were discovered, not planned.</em> Section 04 could not be rendered on its branch because the object <code>regression_by_group</code> is created in section 02, which was not on <code>main</code> yet. The order of the merges has to follow the dependencies of the analysis, and this order should be written down before the branches are created (last column of the first table above).</li>
+</ul>
+</section>
+</section>
+<section id="challenges-encountered-and-lessons-learned" class="level1">
+<h1>Challenges encountered and lessons learned</h1>
+<section id="in-the-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="in-the-analysis">In the analysis</h2>
+<ul>
+<li><strong>Paths.</strong> A path such as <code>data/Results.txt</code> works when the master document is rendered, but not when a chunk is run from a file in <code>Sections/</code>, because the working directory is not the same. We use <code>here()</code>, which always starts from the folder that contains the <code>.Rproj</code> file. This only works if the project is opened through the <code>.Rproj</code> file.</li>
+<li><strong>The same object defined in several places.</strong> In the first version, each section recomputed what it needed in order to run alone. A change in one copy would not have reached the others. We replaced this with the rule “defined once, where it is explained”.</li>
+<li><strong>Running a chunk is not rendering.</strong> A chunk of section 04 run by hand in a new R session fails, because the libraries and the objects of the earlier sections are not loaded. Rendering the master document starts from an empty session and runs everything in order, so it is the only test that says whether the report works.</li>
+<li><strong>Chunk labels and chunk headers.</strong> Quarto stops if two chunks have the same label, and after the include all sections are one single document, so each label is used once in the whole project. A missing space in a chunk header (<code>{rarticle-equations}</code> instead of <code>{r article-equations}</code>) gave an error that did not mention R at all: <code>command not found</code>.</li>
+<li><strong>Included files must not have their own header.</strong> The section files were created as normal Quarto documents, with a YAML header (<code>title</code>, <code>format: html</code>). Once included in the master document this header has no meaning, so we removed it.</li>
+<li><strong>An explanation that sounded right and was wrong.</strong> Our first idea for section 1.7 was that the article averaged the movements per participant before the regression, and that this explained the different equations. When we tested it, the equations did not change at all, because every participant has the same number of movements. We kept the test in the report and looked for the difference elsewhere.</li>
+<li><strong>Counting rows is not counting participants.</strong> The first count of the data showed that a cell had fewer rows, but not who was missing. Only the count of participants showed that nine patients had not done the third level of difficulty, and section 1.7 shows that they are not a random half of the group.</li>
+</ul>
+</section>
+<section id="with-git-and-the-team" class="level2">
+<h2 class="anchored" data-anchor-id="with-git-and-the-team">With Git and the team</h2>
+<ul>
+<li><strong>A branch that is behind <code>main</code>.</strong> GitHub showed “26 commits behind” on a branch, but the Pull button proposed nothing: pulling only compares a branch with its own copy on GitHub, not with <code>main</code>. The branch has to be updated by merging <code>main</code> into it (<em>Update from main</em> in GitHub Desktop).</li>
+<li><strong>Installing the tools.</strong> On one computer the report could not be rendered: R packages were missing, and there was no LaTeX distribution to produce the PDF. The packages were installed with <code>install.packages()</code> and LaTeX with <code>quarto install tinytex</code>. We should have checked this on the first day.</li>
+</ul>
+<p><strong>Personal note from Chloé:</strong> This is the first group project in which the group work itself was my main difficulty, more than the statistics or Git. Not all of us were present at the meetings before 9 October, and we were not at the same level with the tools: updating a branch from <code>main</code> or rendering the PDF were not yet routine for everyone, so steps that I expected to take minutes had to be explained first. A common strategy was therefore agreed late. In practice I wrote the structure of the project and most of the code, and then had to wait for the other sections before I could continue mine, because the discussion depends on them. This waiting delayed my own work much more than any technical problem. The first session I would have liked, where everyone checks that they can clone, update a branch and render the report, could not take place, so what I would do differently is about the plan and not about good intentions: give the sections that others depend on to the members who are present, write a date next to each branch from the first day, reassign a section when its date has passed instead of waiting, and tell the teacher early when a team is not complete, instead of compensating by doing more myself.</p>
+</section>
+<section id="lessons-learned" class="level2">
+<h2 class="anchored" data-anchor-id="lessons-learned">Lessons learned</h2>
+<ul>
+<li>Decide what is shared between the sections, and what depends on what, before writing the first section and before creating the first branch.</li>
+<li>Create a branch when its work starts, and update it from <code>main</code> before each working session.</li>
+<li>Check that every member can clone the repository, install the packages and render the master document before distributing the sections. A team cannot work in parallel if the report only renders on one computer.</li>
+<li>Give each branch a date, and a reviewer who is not its author.</li>
+<li>Render the master document before every push. Running chunks by hand proves nothing about the report.</li>
+<li>Count participants, not only rows, before trusting a design.</li>
+<li>Test an explanation before writing it. A test that fails is still a result.</li>
+<li>Let the report compute its own numbers: the values in the text of sections 1.3 to 1.7 are computed at render time or shown in a table next to the sentence.</li>
+</ul>
+</section>
+</section>
+<section id="checklist" class="level1">
+<h1>Checklist</h1>
+<p>We ticked each line on the final version of the report, just before uploading the PDF. A line is ticked only if we checked it on GitHub or in the rendered PDF, not from memory.</p>
+<p><strong>Repository</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">The repository is public and named <code>IEAP-Series03-RStudio</code> (checked by opening the link of this report in a private browser window)</label></li>
+<li><label><input type="checkbox" checked=""><code>main</code> is up to date: every pull request is merged and no branch is ahead of <code>main</code></label></li>
+<li><label><input type="checkbox" checked=""><code>README.md</code> describes the project, the structure of the repository, the team and how to render the report</label></li>
+<li><label><input type="checkbox" checked=""><code>LICENSE</code> file present</label></li>
+<li><label><input type="checkbox" checked=""><code>IEAP-Series03-Rstudio.qmd</code> (master document) renders without error</label></li>
+<li><label><input type="checkbox" checked=""><code>IEAP-Series03-Rstudio.pdf</code> on <code>main</code> is the render of the last state of the report, and is the file uploaded to Moodle</label></li>
+<li><label><input type="checkbox" checked="">No system file is tracked (<code>.DS_Store</code>)</label></li>
+</ul>
+<p><strong>Structure of the report</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">The master document contains no analysis: each part is a file in <code>Sections/</code>, included at render time</label></li>
+<li><label><input type="checkbox" checked="">No included file has its own YAML header</label></li>
+<li><label><input type="checkbox" checked="">Every chunk has a label, and each label is used once</label></li>
+</ul>
+<p><strong>Git history</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">At least one commit for each question of the series (1.1 to 1.7)</label></li>
+<li><label><input type="checkbox" checked="">Commit messages say what changed</label></li>
+<li><label><input type="checkbox" checked="">One branch per section, merged into <code>main</code> through a pull request</label></li>
+<li><label><input type="checkbox" checked="">No commit directly on <code>main</code> since the first pull request</label></li>
+<li><label><input type="checkbox" checked="">Every team member has commits in the history</label></li>
+<li><label><input type="checkbox" checked="">The section <em>What actually happened</em> describes the history as it is on GitHub</label></li>
+</ul>
+<p><strong>Content asked in the assignment</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">Authors and date in the header</label></li>
+<li><label><input type="checkbox" checked="">Clickable link to the public GitHub repository</label></li>
+<li><label><input type="checkbox" checked="">Analysis of our Git workflow</label></li>
+<li><label><input type="checkbox" checked="">Challenges encountered and lessons learned</label></li>
+<li><label><input type="checkbox" checked="">Complete code visible in the PDF</label></li>
+<li><label><input type="checkbox" checked="">1.1 to 1.3: question, data reorganization, ANOVA and the sentence for the report</label></li>
+<li><label><input type="checkbox" checked="">1.4: regression equations by group</label></li>
+<li><label><input type="checkbox" checked="">1.5: graph with regression lines and equations</label></li>
+<li><label><input type="checkbox" checked="">1.6: graph exported as a PDF of 8 <span class="math inline">\(\times\)</span> 6 inches, present in <code>figures/</code></label></li>
+<li><label><input type="checkbox" checked="">1.7: discussion of the differences with the article</label></li>
+<li><label><input type="checkbox" checked="">Data sources with their URLs</label></li>
+<li><label><input type="checkbox" checked="">Scientific reference with its DOI</label></li>
+<li><label><input type="checkbox" checked="">This checklist</label></li>
+</ul>
+<p><strong>Before uploading</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">Every sentence that interprets a number was read again next to the table or figure it describes</label></li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

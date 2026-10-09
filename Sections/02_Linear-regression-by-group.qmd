@@ -40,7 +40,6 @@ These are the three equations given in the series, so our cleaning and our conve
 
 ```{r}
 #| label: slopes
-#| include: false
 slope <- with(regression_by_group, setNames(slope, GROUP))
 ```
 

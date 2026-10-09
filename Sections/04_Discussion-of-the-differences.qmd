@@ -133,7 +133,6 @@ patients %>%
 ```
 
 ```{r steep-patients}
-#| include: false
 # The limit of 2 s/bit falls in the empty space between the two sets of slopes
 steep  <- filter(patients, slope > 2)
 others <- filter(patients, slope <= 2)
@@ -222,7 +221,6 @@ test_ID3 <- wilcox.test(ID2 ~ did_ID3, data = patients)
 ```
 
 ```{r report-p}
-#| include: false
 report_p <- function(p) ifelse(p < .001, "p < .001", sprintf("p = %.3f", p))
 ```
 
