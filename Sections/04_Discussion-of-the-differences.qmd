@@ -1,5 +1,46 @@
----
-title: "04_Discussion-of-the-differences"
-format: html
-editor: visual
----
+## Discussion: differences with the article
+
+The series tells us that the method of the article was more sophisticated than ours and not fully disclosed. We cannot redo that method, so we ask three questions that our data can answer: how large the differences are, how well our own equations are determined, and where in the data the differences come from. We then check the ANOVA of section 1.3 with tests that need fewer assumptions, and conclude.
+
+### How large are the differences?
+
+Comparing intercepts is misleading, because they are extrapolations (section 1.4). We compare what the two sets of equations predict where the data are, at 3.80 and 5.43 bits. The equations of the article are typed from its Fig. 3.
+
+```{r article-equations}
+article <- tibble(
+  GROUP     = factor(c("pp", "ap", "cp"), levels = levels(clean_results$GROUP)),
+  intercept = c(0.422, 0.622, 0.475),
+  slope     = c(0.672, 0.118, 0.097)
+)
+
+bind_rows("Article (Fig. 3)" = article,
+          "Ours"             = select(regression_by_group, GROUP, intercept, slope),
+          .id = "source") %>%
+  mutate(MT_easy = intercept + slope * 3.80,
+         MT_hard = intercept + slope * 5.43) %>%
+  arrange(GROUP) %>%
+  select(GROUP, source, intercept, slope, MT_easy, MT_hard) %>%
+  knitr::kable(digits = c(0, 0, 3, 3, 2, 2),
+               col.names = c("Group", "Source", "Intercept (s)", "Slope (s/bit)",
+                             "MT at 3.80 bits (s)", "MT at 5.43 bits (s)"))
+```
+
+For the two control groups, the article and our analysis predict movement times that differ by less than 0.1 s, even though the intercepts look different (0.62 against 0.37 s for the age-matched group). For the patients, our movement times are longer at both levels, and the gap is about three times larger at the difficult level. This is why our slope is steeper and, by extrapolation, our intercept negative. The disagreement is about the patients.
+
+The ANOVA gives a similar picture:
+
+```{r anova-comparison}
+tibble(
+  Effect      = c("GROUP", "ID", "GROUP:ID"),
+  F_article   = c(35.32, 5.42, 10.02),
+  F_ours      = a[Effect, "F"],
+  ges_article = c(0.67, 0.03, 0.03),
+  ges_ours    = a[Effect, "ges"]
+) %>%
+  knitr::kable(digits = 2)
+
+```
+
+The F values of GROUP and of the interaction are close. For ID we cannot compare: the article reports F(1, 48) = 5.42 with p = 0.0000, but this F value corresponds to p = `r round(pf(5.42, 1, 48, lower.tail = FALSE), 3)`, so one of the two numbers is probably a typing error.
+
+The 48 degrees of freedom are useful for another reason. With three groups they correspond to 51 participants, so the article kept all 19 patients. Whatever explains the different equations, it is not that some participants were left out.
