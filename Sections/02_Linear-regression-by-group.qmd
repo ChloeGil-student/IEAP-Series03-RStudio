@@ -45,3 +45,9 @@ slope <- with(regression_by_group, setNames(slope, GROUP))
 ```
 
 **What they tell us.** The slope is positive in the three groups: movement time increases with difficulty. One more bit costs `r round(slope["pp"], 2)` s to the patients, against `r round(slope["ap"], 2)` s and `r round(slope["cp"], 2)` s to the age-matched and young controls, that is `r round(slope["pp"] / slope["ap"], 1)` and `r round(slope["pp"] / slope["cp"], 1)` times more. The difference between the slopes is the GROUP $\times$ ID interaction of section 1.3, expressed in seconds per bit.
+
+**What they do not tell us.** We see three limits.
+
+- *The regression adds no information to the two means.* With only two values of ID, the least-squares line of a group passes exactly through its two mean movement times: the slope is (mean at ID2 $-$ mean at ID1) / (5.43 $-$ 3.80). We cannot test whether the relation is really linear, a limit that the article also states. The file does contain a third level, but not all patients did it and we do not know its value in bits.
+- *The intercept is an extrapolation.* It is the predicted movement time at ID = 0, which is 3.8 bits away from the nearest measurement, so a small change in the two means is amplified. The negative intercept of the patients cannot be a movement time; it only says where the extended line crosses the vertical axis.
+- *We report coefficients, not their uncertainty.* The model is fitted on all movements as if they were independent, although they come from `r n_distinct(clean_results$SUBJ)` participants. This does not change the intercepts and slopes, but the standard errors and p-values that `lm()` would print are too optimistic, so we do not report them. Our test of the difference between groups is the ANOVA, which is based on participants.
