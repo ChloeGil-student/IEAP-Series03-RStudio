@@ -274,3 +274,37 @@ test_ratio <- kruskal.test(ratio ~ GROUP, data = participant_lines)
 ```
 
 Going from the easy to the difficult level adds about a quarter to the movement time of the controls and about a half to that of the patients. The difference between groups is still there (Kruskal-Wallis test on the ratios, `r report_p(test_ratio$p.value)`), but it is much less clear than in seconds, and it would not pass the threshold of .01 used in the article. "Five to seven times steeper" and "about twice the relative cost" describe the same data. Most of the difference between the slopes comes from the fact that the patients are slower everywhere.
+
+### Checking the ANOVA without assuming equal variances
+
+In section 1.3 we saw that the standard deviation between participants is about `r round(max(cell_means$sd) / min(cell_means$sd))` times larger for the patients than for the young controls, which the ANOVA does not allow. With two levels of ID the check is simple, because the two effects that involve GROUP reduce to one number per participant: the main effect of GROUP compares the participants' mean movement time (`mean_MT`), and the GROUP $\times$ ID interaction compares their difference between the two levels (`difference`). We test both with rank tests, which make no assumption about variances.
+
+```{r rank-tests}
+test_group       <- kruskal.test(mean_MT ~ GROUP, data = participant_lines)
+test_interaction <- kruskal.test(difference ~ GROUP, data = participant_lines)
+
+# Which groups differ? Wilcoxon tests two by two, Holm correction
+pairs_group <- pairwise.wilcox.test(participant_lines$mean_MT,
+                                    participant_lines$GROUP,
+                                    p.adjust.method = "holm")
+pairs_interaction <- pairwise.wilcox.test(participant_lines$difference,
+                                          participant_lines$GROUP,
+                                          p.adjust.method = "holm")
+
+pairs_group$p.value
+pairs_interaction$p.value
+```
+
+Both effects are confirmed (Kruskal-Wallis, GROUP: `r report_p(test_group$p.value)`; interaction: `r report_p(test_interaction$p.value)`), so the conclusion of section 1.3 does not depend on the assumption that was violated.
+
+The comparisons two by two give the post-hoc information that was missing in section 1.3. For the effect of difficulty (second table), the patients differ from both control groups and the two control groups do not differ from each other, as in the article. For the overall movement time (first table), the patients again differ from both control groups, but the two control groups also differ from each other: the age-matched controls are about 0.2 s slower than the young ones. On the graph of section 1.5 the two control lines look identical only because the axis is scaled for the patients.
+
+The article reports that the two control groups do not differ (Tukey contrasts, p = 0.79). We find the same when we use the same kind of test:
+
+```{r tukey-controls}
+TukeyHSD(aov(mean_MT ~ GROUP, data = participant_lines))$GROUP
+```
+
+The two results do not contradict each other. Tukey's test compares each difference with a variability pooled over the three groups, and here this variability is mostly that of the patients. A difference of 0.2 s between controls is small compared with it, although it is large compared with the variability of the controls themselves. The rank test does not pool the variances. That the age-matched controls are a little slower than the young ones is therefore likely, but it is a small effect next to the effect of stroke.
+
+These tests were chosen after looking at the data, so they are checks of our first analysis, not new confirmatory results.
