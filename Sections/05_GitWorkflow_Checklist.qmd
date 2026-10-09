@@ -1,5 +1,136 @@
----
-title: "05_GitWorkflow_Checklist"
-format: html
----
+# Our Git workflow
+
+## The strategy we chose
+
+Three people write one report. If we all edit the same file, Git cannot merge our work without conflicts. Two decisions follow from this.
+
+**One file per part of the series.** The master document `IEAP-Series03-Rstudio.qmd` contains only the header, the setup and the list of included files. Each part of the analysis is a separate file in `Sections/` with one owner, included at render time. The only file that several people touch is the master document, where each section adds one `include` line.
+
+**One place for what is shared.** The sections are not independent: the graph needs the regression, and the discussion needs everything. What all sections need from the start (libraries, loading and cleaning the data) is in `R/setup.R`, sourced once by the master document. The other objects are created in the section that explains them and reused later (`cell_means` from 1.3 in the graph, `fit_by_group()` from 1.4 in the discussion). Nothing is computed twice.
+
+The second decision has a cost that we only understood later: a section cannot be rendered before the sections it depends on are on `main`. The branches therefore cannot be merged in any order.
+
+| Branch | File | Owner | Needs on `main` first |
+|:----------------|:--------------------------------|:-----------|:------------------|
+| `Chloe_01` | `Sections/01_Data-reorganisation.qmd` | Chloé | project skeleton |
+| `master-document` | `IEAP-Series03-Rstudio.qmd`, `references.bib` | Chloé | section 01 |
+| `Charles-02` | `Sections/02_Linear-regression-by-group.qmd` | Charles | section 01 |
+| `Tuba_03` | `Sections/03_Save-the-graph.qmd` | Tuba | sections 01 and 02 |
+| `Chloe_04` | `Sections/04_Discussion-of-the-differences.qmd` | Chloé | sections 01 and 02 |
+| `05-GitWorkflow_checklist` | `Sections/05_GitWorkflow_Checklist.qmd` | Chloé | nothing |
+| `final` | corrections after proofreading, `README.md`, final PDF | Chloé | everything |
+
+The cycle for one branch is: update the branch from `main`, write the section with at least one commit per question of the series, render the master document, push, open a pull request, merge, and everybody updates.
+
+## What actually happened
+
+The history of the repository does not follow this plan from the start, and we prefer to describe it as it is.
+
+**6 October: a start without a strategy.** The repository, the data, the RStudio project and four empty section files were committed directly on `main` (7 commits). The three personal branches were created the same day, before the structure of the project was decided. A first version of section 01 was written on `Chloe_01`, with its own code to load and clean the data.
+
+**8 October: reorganization.** We introduced `R/setup.R` and the use of `here()`, and section 01 was written again on the same branch so that it relies on the shared setup. Both versions are visible in the history of `Chloe_01` (commits of 6 October, then from `a06fff0` on 8 October). The master document was written on a separate branch, `master-document`. Two pull requests brought this work to `main`: #1 (`Chloe_01`) and #2 (`master-document`).
+
+**9 October, morning: branches that were out of date.** The branches created on 6 October had not moved while `main` advanced: `Charles-02` and `Tuba_03` were 26 and 25 commits behind `main`, and `master-document` was 3 behind after pull request #1. A branch does not follow `main` by itself. `master-document` was updated with a pull request in the opposite direction (#3, from `main` into the branch), and `Charles-02` and `Tuba_03` were updated from `main` before any work started on them.
+
+**9 October: the sections, one after the other.** The remaining sections reached `main` in the order of their dependencies:
+
+| Pull request | Branch | Content | Merged at |
+|:--|:--|:----------------------------------|:--|
+| #4 | `Charles-02` | section 1.4, regression by group (4 commits) | 11:06 |
+| #5 | `master-document` | `include` line for section 02 | 11:55 |
+| #6 | `Tuba_03` | sections 1.5 and 1.6, graph and PDF export, with its `include` line (3 commits) | 12:41 |
+| #8 | `Chloe_04` | section 1.7, discussion, with its `include` line (9 commits) | 13:55 |
+
+Pull request #5 shows the problem of out-of-date branches a second time. The `include` line for section 02 was committed on `master-document`, which did not contain section 02 itself, because that section had reached `main` through #4. The branch had to be updated from `main` before the report could be rendered with the new section. From #6 on, each section branch added its own `include` line, which is simpler.
+
+The last two branches are `05-GitWorkflow_checklist`, for this part of the report, and `final`, for the corrections found when proofreading the complete PDF (sections 1.1 to 1.3 and 1.7), the `README.md` and the final render. `final` is merged last, after being updated from `main`, so that the PDF on `main` is the render of the last state of the report.
+
+## What we think of our own workflow
+
+**What worked.** One file per section did what it was meant to do: there was no merge conflict in the text of the report. The shared `R/setup.R` removed the copies of the cleaning code that existed in the first version. Pull requests gave a readable history of `main` after 8 October: each merge commit corresponds to one part of the report.
+
+**What did not.**
+
+-   *Branches were created too early.* Creating all branches on the first day looked organized, but a branch is a copy of `main` at the moment it is created. Each of them had to be updated before it could be used. A branch should be created when the work on it starts.
+-   *Section 01 was written twice.* Writing the analysis before agreeing on what is shared cost one full rewrite. The decision about `R/setup.R` should have come before the first section.
+-   *Dependencies between sections were discovered, not planned.* Section 04 could not be rendered on its branch because the object `regression_by_group` is created in section 02, which was not on `main` yet. The order of the merges has to follow the dependencies of the analysis, and this order should be written down before the branches are created (last column of the first table above).
+
+# Challenges encountered and lessons learned
+
+## In the analysis
+
+-   **Paths.** A path such as `data/Results.txt` works when the master document is rendered, but not when a chunk is run from a file in `Sections/`, because the working directory is not the same. We use `here()`, which always starts from the folder that contains the `.Rproj` file. This only works if the project is opened through the `.Rproj` file.
+-   **The same object defined in several places.** In the first version, each section recomputed what it needed in order to run alone. A change in one copy would not have reached the others. We replaced this with the rule "defined once, where it is explained".
+-   **Running a chunk is not rendering.** A chunk of section 04 run by hand in a new R session fails, because the libraries and the objects of the earlier sections are not loaded. Rendering the master document starts from an empty session and runs everything in order, so it is the only test that says whether the report works.
+-   **Chunk labels and chunk headers.** Quarto stops if two chunks have the same label, and after the include all sections are one single document, so each label is used once in the whole project. A missing space in a chunk header (`{rarticle-equations}` instead of `{r article-equations}`) gave an error that did not mention R at all: `command not found`.
+-   **Included files must not have their own header.** The section files were created as normal Quarto documents, with a YAML header (`title`, `format: html`). Once included in the master document this header has no meaning, so we removed it.
+-   **An explanation that sounded right and was wrong.** Our first idea for section 1.7 was that the article averaged the movements per participant before the regression, and that this explained the different equations. When we tested it, the equations did not change at all, because every participant has the same number of movements. We kept the test in the report and looked for the difference elsewhere.
+-   **Counting rows is not counting participants.** The first count of the data showed that a cell had fewer rows, but not who was missing. Only the count of participants showed that nine patients had not done the third level of difficulty, and section 1.7 shows that they are not a random half of the group.
+
+## With Git and the team
+
+-   **A branch that is behind `main`.** GitHub showed "26 commits behind" on a branch, but the Pull button proposed nothing: pulling only compares a branch with its own copy on GitHub, not with `main`. The branch has to be updated by merging `main` into it (*Update from main* in GitHub Desktop).
+-   **Installing the tools.** On one computer the report could not be rendered: R packages were missing, and there was no LaTeX distribution to produce the PDF. The packages were installed with `install.packages()` and LaTeX with `quarto install tinytex`. We should have checked this on the first day.
+
+**Personal note from Chloé:** This is the first group project in which the group work itself was my main difficulty, more than the statistics or Git. Not all of us were present at the meetings before 9 October, and we were not at the same level with the tools: updating a branch from `main` or rendering the PDF were not yet routine for everyone, so steps that I expected to take minutes had to be explained first. A common strategy was therefore agreed late. In practice I wrote the structure of the project and most of the code, and then had to wait for the other sections before I could continue mine, because the discussion depends on them. This waiting delayed my own work much more than any technical problem. The first session I would have liked, where everyone checks that they can clone, update a branch and render the report, could not take place, so what I would do differently is about the plan and not about good intentions: give the sections that others depend on to the members who are present, write a date next to each branch from the first day, reassign a section when its date has passed instead of waiting, and tell the teacher early when a team is not complete, instead of compensating by doing more myself.
+
+## Lessons learned
+
+-   Decide what is shared between the sections, and what depends on what, before writing the first section and before creating the first branch.
+-   Create a branch when its work starts, and update it from `main` before each working session.
+-   Check that every member can clone the repository, install the packages and render the master document before distributing the sections. A team cannot work in parallel if the report only renders on one computer.
+-   Give each branch a date, and a reviewer who is not its author.
+-   Render the master document before every push. Running chunks by hand proves nothing about the report.
+-   Count participants, not only rows, before trusting a design.
+-   Test an explanation before writing it. A test that fails is still a result.
+-   Let the report compute its own numbers: the values in the text of sections 1.3 to 1.7 are computed at render time or shown in a table next to the sentence.
+
+# Checklist
+
+We ticked each line on the final version of the report, just before uploading the PDF. A line is ticked only if we checked it on GitHub or in the rendered PDF, not from memory.
+
+**Repository**
+
+-   [ ] The repository is public and named `IEAP-Series03-RStudio` (checked by opening the link of this report in a private browser window)
+-   [ ] `main` is up to date: every pull request is merged and no branch is ahead of `main`
+-   [ ] `README.md` describes the project, the structure of the repository, the team and how to render the report
+-   [ ] `LICENSE` file present
+-   [ ] `IEAP-Series03-Rstudio.qmd` (master document) renders without error
+-   [ ] `IEAP-Series03-Rstudio.pdf` on `main` is the render of the last state of the report, and is the file uploaded to Moodle
+-   [ ] No system file is tracked (`.DS_Store`)
+
+**Structure of the report**
+
+-   [ ] The master document contains no analysis: each part is a file in `Sections/`, included at render time
+-   [ ] No included file has its own YAML header
+-   [ ] Every chunk has a label, and each label is used once
+
+**Git history**
+
+-   [ ] At least one commit for each question of the series (1.1 to 1.7)
+-   [ ] Commit messages say what changed
+-   [ ] One branch per section, merged into `main` through a pull request
+-   [ ] No commit directly on `main` since the first pull request
+-   [ ] Every team member has commits in the history
+-   [ ] The section *What actually happened* describes the history as it is on GitHub
+
+**Content asked in the assignment**
+
+-   [ ] Authors and date in the header
+-   [ ] Clickable link to the public GitHub repository
+-   [ ] Analysis of our Git workflow
+-   [ ] Challenges encountered and lessons learned
+-   [ ] Complete code visible in the PDF
+-   [ ] 1.1 to 1.3: question, data reorganization, ANOVA and the sentence for the report
+-   [ ] 1.4: regression equations by group
+-   [ ] 1.5: graph with regression lines and equations
+-   [ ] 1.6: graph exported as a PDF of 8 $\times$ 6 inches, present in `figures/`
+-   [ ] 1.7: discussion of the differences with the article
+-   [ ] Data sources with their URLs
+-   [ ] Scientific reference with its DOI
+-   [ ] This checklist
+
+**Before uploading**
+
+-   [ ] Every sentence that interprets a number was read again next to the table or figure it describes
 
