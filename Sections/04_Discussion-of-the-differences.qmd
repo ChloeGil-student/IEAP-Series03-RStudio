@@ -128,9 +128,8 @@ patients <- participant_lines %>%
 patients %>%
   select(SUBJ, ID1, ID2, slope, intercept, movements_over_10_s, did_ID3) %>%
   knitr::kable(digits = 2,
-               col.names = c("Patient", "MT at ID1 (s)", "MT at ID2 (s)",
-                             "Slope (s/bit)", "Intercept (s)",
-                             "Movements of 10 s or more", "Did ID3"))
+                             col.names = c("Patient", "MT ID1 (s)", "MT ID2 (s)",
+                             "Slope", "Intercept", "Long mov.", "ID3"))
 ```
 
 ```{r steep-patients}
