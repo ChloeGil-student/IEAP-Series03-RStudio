@@ -60,6 +60,8 @@ The group sizes are 13, 19 and 19, as in the article. Two conditions are incompl
 - **`R3`** was done by no patient and by 11 of the 13 age-matched controls.
 
 ### Two decisions
+  
+**We remove `ID3` for everybody.** The interaction cannot be estimated fairly with a level that half of one group did not do.
 
 **We also remove `R3` for everybody.** This one is a choice, not an obligation: the ANOVA would run with `R3`, because the rows are averaged per participant anyway. Our main reason is the design of the article: two levels of difficulty and 80 reaching movements per participant [@mottet2017, Methods], that is two repetitions in each of the two trials. `R3` is an extra repetition that the article does not analyse. Without `ID3` and `R3`, our data have exactly the structure of the article (checked below). We also looked at the repetitions themselves:
 
@@ -173,7 +175,6 @@ Warnings are hidden everywhere else in this report, but not for this chunk: `ezA
 ### The sentence for the report
 
 ```{r anova-sentence}
-#| include: false
 a <- res_anova$ANOVA
 rownames(a) <- a$Effect
 
