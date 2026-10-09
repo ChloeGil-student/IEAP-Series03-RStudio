@@ -35,3 +35,13 @@ knitr::kable(regression_by_group, digits = 3)
 ```
 
 These are the three equations given in the series, so our cleaning and our conversion of ID reproduce the expected result.
+
+### What these equations do and do not tell us
+
+```{r}
+#| label: slopes
+#| include: false
+slope <- with(regression_by_group, setNames(slope, GROUP))
+```
+
+**What they tell us.** The slope is positive in the three groups: movement time increases with difficulty. One more bit costs `r round(slope["pp"], 2)` s to the patients, against `r round(slope["ap"], 2)` s and `r round(slope["cp"], 2)` s to the age-matched and young controls, that is `r round(slope["pp"] / slope["ap"], 1)` and `r round(slope["pp"] / slope["cp"], 1)` times more. The difference between the slopes is the GROUP $\times$ ID interaction of section 1.3, expressed in seconds per bit.
