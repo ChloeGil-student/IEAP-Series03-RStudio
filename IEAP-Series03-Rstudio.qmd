@@ -61,6 +61,7 @@ cat(readLines(here("R", "setup.R")), sep = "\n")
 # ANOVA: does the effect of difficulty depend on the group?
 
 {{< include Sections/01_Data-reorganisation.qmd >}}
+{{< include Sections/02_Linear-regression-by-group.qmd >}}
 
 # Data sources {.unnumbered}
 
