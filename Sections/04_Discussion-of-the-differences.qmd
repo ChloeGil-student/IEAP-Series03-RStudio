@@ -308,3 +308,11 @@ TukeyHSD(aov(mean_MT ~ GROUP, data = participant_lines))$GROUP
 The two results do not contradict each other. Tukey's test compares each difference with a variability pooled over the three groups, and here this variability is mostly that of the patients. A difference of 0.2 s between controls is small compared with it, although it is large compared with the variability of the controls themselves. The rank test does not pool the variances. That the age-matched controls are a little slower than the young ones is therefore likely, but it is a small effect next to the effect of stroke.
 
 These tests were chosen after looking at the data, so they are checks of our first analysis, not new confirmatory results.
+
+### Are the conclusions similar?
+
+For what the article concludes, yes. The three effects of the ANOVA are significant in both analyses, the F values of GROUP and of the interaction are of the same order, rank tests confirm them, and the patients differ from both control groups. The movement times of the controls agree with the article within 0.1 s, and the intercepts do not differ between groups in either analysis.
+
+For the equation of the patients, the question is not well posed. Our intercept has the opposite sign, but its confidence interval covers more than a second on each side of zero and one patient decides the sign. The article is careful on the same point: its intercepts do not differ between groups and the authors interpret this "with caution, because extrapolations are very sensitive to errors" [@mottet2017, Discussion]. The difference that deserves attention is the slope, and it comes from `r nrow(steep)` patients whose long, fragmented movements are longer in our file than they seem to be in the data behind the published figure.
+
+Two things in our data go beyond the comparison. The statement that patients are five to seven times more sensitive to difficulty holds in seconds; in proportion to their own speed it is about twice. And "the patients" is not one homogeneous group in this file: the slower half did not do the third level, and three of them account for most of the difference between our equation and the published one.
