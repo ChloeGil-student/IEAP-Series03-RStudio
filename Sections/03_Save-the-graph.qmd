@@ -65,4 +65,18 @@ graph_MT_ID <- ggplot(cell_means) +
 graph_MT_ID
 ```
 
-\`\`\`{r}
+### Reading the graph
+
+@fig-mt-id has the same shape as Fig. 3 of the article: two almost flat and almost identical lines for the control groups, and a much higher and steeper line for the patients, with error bars that are several times longer. Two differences are visible without any calculation. Our points for the patients are higher, especially at the more difficult level, and our line for the patients crosses the vertical axis below zero, whereas the three lines of the article start close together around half a second. Section 1.7 looks for the reason.
+
+## Export the graph as a PDF
+
+The journal asks for a figure of 8 $\times$ 6 inches. The file is written in the folder `figures/` of the repository.
+```{r}
+#| label: export-pdf
+dir.create(here("figures"), showWarnings = FALSE)
+
+ggsave(here("figures", "MT_as_function_of_ID.pdf"),
+       plot = graph_MT_ID, width = 8, height = 6, units = "in")
+```
+
